@@ -1,6 +1,6 @@
 import {useAuthContext} from "../../context/authContext";
 import {useNavigate} from "react-router-dom";
-import {NavLink} from "react-router-dom";
+import {NavLink, Link } from "react-router-dom";
 import {Button, Flex, Menu, MenuProps} from "antd"
 
 const items = new Array(3).fill(null).map((_, index) => ({
@@ -42,25 +42,27 @@ export  function Header() {
     }
 
     return (
-      <Flex align={"center"} justify={"space-between"} 
-      // style={{width: '100%'}}
+      <Flex
+        align={"center"}
+        justify={"space-between"}
+        // style={{width: '100%'}}
       >
+        <Menu
+          items={topNavItems}
+          mode="horizontal"
+          theme="dark"
+          //defaultSelectedKeys={["about"]}
+          disabledOverflow
+        />
         
-          <Menu
-            items={topNavItems}
-            mode="horizontal"
-            theme="dark"
-            //defaultSelectedKeys={["about"]}
-          />
-
-          {isLogin && user && (
-            <Flex gap={"middle"} align={"center"}>
-              <span style={{ color: "white" }}>{JSON.parse(user).email}</span>
-              <Button onClick={logoutHandler} size={"small"} type={"primary"}>
-                Выйти
-              </Button>
-            </Flex>
-          )}
+        {isLogin && user && (
+          <Flex gap={"middle"} align={"center"}>
+            <span style={{ color: "white" }}>{JSON.parse(user).email}</span>
+            <Button onClick={logoutHandler} size={"small"} type={"primary"}>
+              Выйти
+            </Button>
+          </Flex>
+        )}
       </Flex>
     );
 }

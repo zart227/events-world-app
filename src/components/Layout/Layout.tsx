@@ -14,23 +14,23 @@ function Layout() {
 
     return (
       <AntdLayout style={{ minHeight: "100vh" }}>
-        <Header >
+        <Header>
           <MyHeader />
         </Header>
-        <Content style={{ padding: "48px" }}>
+        <Content style={{ padding: "48px 48px 0 48px" }}>
           <div
             style={{
               background: colorBgContainer,
-              minHeight: "calc(100vh - 224px)",
-              padding: 24,
+              minHeight: "calc(100vh - 181px)",
+              padding: "24px 24px 0 24px",
               borderRadius: borderRadiusLG,
             }}
           >
             <Outlet />
           </div>
         </Content>
-        <Footer style={{ color: "rgba(255, 255, 255, 0.65)" }}>
-          {new Date().getFullYear()}
+        <Footer style={{ textAlign: "center" }}>
+          Сервис проверки загрязнения воздуха ©{new Date().getFullYear()}
         </Footer>
       </AntdLayout>
     );
