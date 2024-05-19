@@ -1,7 +1,7 @@
 import pollution from "../images/polution.jpg"
 import React from 'react'
 
-export const AboutPage = () => {
+const AboutPage = () => {
   return (
             <>
             <h1>О нашем проекте</h1>
@@ -26,3 +26,5 @@ export const AboutPage = () => {
         </>
   )
 }
+
+export default AboutPage

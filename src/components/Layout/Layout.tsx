@@ -1,41 +1,26 @@
-import './Layout.css'
-import {Outlet} from "react-router-dom";
-import {Header as MyHeader} from "../Header/Header";
-//import './App.css'
+import React from 'react';
+import { Layout } from 'antd';
+import { Outlet } from 'react-router-dom';
+import AppHeader from '../Header/Header';
 
-import { Layout as AntdLayout, theme } from 'antd';
+const { Header, Content, Footer } = Layout;
 
-const { Header, Footer, Content } = AntdLayout;
+const AppLayout: React.FC = () => {
 
-function Layout() {
-    const {
-        token: { colorBgContainer, borderRadiusLG },
-    } = theme.useToken();
 
     return (
-      <AntdLayout style={{ minHeight: "100vh" }}>
-        <Header>
-          <MyHeader />
-        </Header>
-        <Content style={{ padding: "48px 48px 0 48px" }}>
-          <div
-            style={{
-              background: colorBgContainer,
-              minHeight: "calc(100vh - 181px)",
-              padding: "24px 24px 0 24px",
-              borderRadius: borderRadiusLG,
-            }}
-          >
-            <Outlet />
-          </div>
-        </Content>
-        <Footer style={{ textAlign: "center" }}>
-          Сервис проверки загрязнения воздуха ©{new Date().getFullYear()}
-        </Footer>
-      </AntdLayout>
+        <Layout className="layout">
+            <Header>
+                <AppHeader/>
+            </Header>
+            <Content style={{ padding: '0 50px' }}>
+                <div className="site-layout-content">
+                    <Outlet />
+                </div>
+            </Content>
+            <Footer style={{ textAlign: 'center' }}>Сервис загрязненности воздуха ©2024 Created by WebSolutions</Footer>
+        </Layout>
     );
-}
+};
 
-export default Layout;
-
-
+export default AppLayout;
