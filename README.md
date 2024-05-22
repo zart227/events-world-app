@@ -1,36 +1,96 @@
-# Getting Started with Create React App
+# Pollution Data App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a web application for fetching and displaying air pollution data for various cities. It includes both frontend and backend components.
 
-## Пошаговая инструкция
-### 1. Настроить конфигурационный файл .env
-### 2. Запустить сборку фронта командой `npm run build`
-### 3. Стартовать приложение командой `npm run start`
+## Features
 
-## Available Scripts
+- Search for air pollution data by city name
+- Display air pollution data in a table and chart
+- Store and retrieve historical pollution data from a MongoDB database
 
-In the project directory, you can run:
+## Prerequisites
 
-### `npm run build`
+- Node.js (v14 or later)
+- MongoDB
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Installation
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **Clone the repository:**
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    ```bash
+    git clone https://github.com/your-username/pollution-data-app.git
+    cd pollution-data-app
+    ```
 
-### `npm run start`
+2. **Set up environment variables:**
 
-Стартует бэкенд и фронтент.
-Для просмотра в браузере открыть  [http://localhost:9100](http://localhost:9500).
+    Create a `.env` file in the root directory of the project and add the following variables:
 
-### `npm run frontend:start`
+    ```env
+    MONGO_URI=mongodb://localhost:27017
+    DB_NAME=pollutionData
+    SERVER_PORT=9100
+    REACT_APP_YANDEX_GEOCODER_API_KEY=your_yandex_geocoder_api_key
+    REACT_APP_OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
+    ```
 
-Runs only frontend-app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+3. **Install dependencies:**
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+    ```bash
+    npm install
+    ```
 
+4. **Set up the database:**
+
+    ```bash
+    npm run setup-db
+    ```
+
+5. **Build the frontend:**
+
+    ```bash
+    npm run build
+    ```
+
+6. **Start the application:**
+
+    ```bash
+    npm run start
+    ```
+
+    This command will start both the backend server and the React frontend.
+
+## Additional Scripts
+
+- **Start the backend server in development mode:**
+
+    ```bash
+    npm run dev
+    ```
+
+    This command starts the backend server using nodemon, which automatically restarts the server when changes are made to the code.
+
+- **Start the React frontend in development mode:**
+
+    ```bash
+    npm run start-client
+    ```
+
+    This command starts only the React frontend in development mode. You can view it in your browser at [http://localhost:3000](http://localhost:3000).
+
+## Folder Structure
+
+- **backend**: Contains the backend server code and database setup script.
+- **build**: Contains the production build of the React frontend.
+- **public**: Contains the public assets for the React frontend.
+- **src**: Contains the source code for the React frontend.
+  - **components**: React components.
+  - **pages**: React pages.
+  - **services**: API service definitions.
+  - **store**: Redux store setup.
+  - **types**: TypeScript types.
+  - **utils**: Utility functions.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
