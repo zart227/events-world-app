@@ -7,6 +7,8 @@ This project is a web application for fetching and displaying air pollution data
 - Search for air pollution data by city name
 - Display air pollution data in a table and chart
 - Store and retrieve historical pollution data from a MongoDB database
+- End-to-end testing with Cypress
+- Component testing and documentation with Storybook
 
 ## Prerequisites
 
@@ -32,6 +34,8 @@ This project is a web application for fetching and displaying air pollution data
     SERVER_PORT=9100
     REACT_APP_YANDEX_GEOCODER_API_KEY=your_yandex_geocoder_api_key
     REACT_APP_OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
+    TEST_EMAIL=your_test_email@example.com
+    TEST_PASSWORD=your_test_password
     ```
 
 3. **Install dependencies:**
@@ -78,6 +82,30 @@ This project is a web application for fetching and displaying air pollution data
 
     This command starts only the React frontend in development mode. You can view it in your browser at [http://localhost:3000](http://localhost:3000).
 
+- **Open Cypress for end-to-end testing:**
+
+    ```bash
+    npm run cypress:open
+    ```
+
+    This command opens the Cypress test runner for running end-to-end tests.
+
+- **Start Storybook for component testing and documentation:**
+
+    ```bash
+    npm run storybook
+    ```
+
+    This command starts Storybook on [http://localhost:6006](http://localhost:6006), where you can view and interact with your components.
+
+- **Build Storybook:**
+
+    ```bash
+    npm run build-storybook
+    ```
+
+    This command builds the Storybook static site, which can be deployed for documentation purposes.
+
 ## Folder Structure
 
 - **backend**: Contains the backend server code and database setup script.
@@ -90,6 +118,10 @@ This project is a web application for fetching and displaying air pollution data
   - **store**: Redux store setup.
   - **types**: TypeScript types.
   - **utils**: Utility functions.
+  - **stories**: Storybook stories for components.
+- **cypress**: Contains Cypress end-to-end tests and configurations.
+  - **e2e**: End-to-end test files.
+  - **support**: Custom commands and Cypress configurations.
 
 ## License
 
