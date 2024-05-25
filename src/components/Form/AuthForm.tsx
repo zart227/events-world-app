@@ -1,5 +1,5 @@
-import React from 'react';
-import { Form, Input, Button } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Form, Input, Button, FormRule } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
 
 interface AuthFormProps {
@@ -9,7 +9,17 @@ interface AuthFormProps {
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, onFinish }) => {
   const [form] = Form.useForm();
+  const [submitDisabled, setSubmitDisabled] = useState(true);
 
+  const values = Form.useWatch([], form);
+
+  useEffect(() => {
+    form
+        .validateFields({validateOnly: true})
+        .then(() => setSubmitDisabled(false))
+        .catch(() => setSubmitDisabled(true));
+  }, [form, values]);
+  
   // Custom validation for password confirmation
   const validateConfirmPassword = (rule: any, value: any) => {
     if (mode === 'register' && value !== form.getFieldValue('password')) {
@@ -17,6 +27,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onFinish }) => {
     }
     return Promise.resolve();
   };
+
+  const passwordRules: FormRule[] = [
+    { required: true, message: 'Нужно ввести пароль' },
+    {
+        min: 6,
+        message: 'Минимум 6 символов'
+    },
+    {
+      pattern: /[a-z]/,
+      message: 'Только английские символы в нижнем регистре'
+    }
+  ];
+
+  // if (mode === 'register') {
+  //     passwordRules.push({
+  //         pattern: /[a-z]/,
+  //         message: 'Только английские символы в нижнем регистре'
+  //     })
+  // }
 
   return (
     <Form
@@ -40,11 +69,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onFinish }) => {
       <Form.Item
         name="password"
         label="Пароль"
-        rules={[
-          { required: true, message: 'Пожалуйста, введите ваш пароль' },
-          { min: 6, message: 'Пароль должен быть минимум 6 символов' },
-          { pattern: /^[a-z]+$/, message: 'Пароль должен содержать только английские буквы в нижнем регистре' },
-        ]}
+        rules={passwordRules}
       >
         <Input.Password prefix={<LockOutlined />} placeholder="Пароль" />
       </Form.Item>
@@ -62,7 +87,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onFinish }) => {
         </Form.Item>
       )}
       <Form.Item>
-        <Button type="primary" htmlType="submit">
+        <Button type="primary" htmlType="submit" disabled={submitDisabled}>
           {mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
         </Button>
       </Form.Item>

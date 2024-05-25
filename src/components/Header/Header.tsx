@@ -52,7 +52,7 @@ const AppHeader: React.FC = () => {
             <Menu.Item key="email" style={{ marginLeft: 'auto' }}>
                 {userData?.email}
             </Menu.Item>
-            <Menu.Item key="logout" onClick={handleLogout}>
+            <Menu.Item key="logout" data-role="logout" onClick={handleLogout}>
                 Выйти
             </Menu.Item>
         </>
