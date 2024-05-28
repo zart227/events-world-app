@@ -13,8 +13,8 @@ import { LocationData, PollutionData } from '../types/types';
 import dayjs from 'dayjs';
 import { extractErrorMessage } from '../utils/extractErrorMessage';
 
-const serverPort = process.env.REACT_APP_SERVER_PORT;
-const serverAddress = `//localhost:${serverPort}`;
+const serverPort = process.env.REACT_APP_SERVER_PORT || '3001';
+const serverAddress = `//localhost:${serverPort}/api`;
 
 type FieldType = {
     address: string;
@@ -28,19 +28,20 @@ const CityInfoPage: React.FC = () => {
     const values = Form.useWatch([], form);
 
     useEffect(() => {
-        try {
-            fetch(`${serverAddress}/pollutions`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    dispatch(setPollutionsList(data));
-                });  
-        } catch (error) {
-            message.error('Ошибка получения данных с сервера!');
+        fetch(`${serverAddress}/pollutions`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+        })
+        .then((res) => res.json())
+        .then((data) => {
+            dispatch(setPollutionsList(data));
+        })  
+        .catch ((error: any) => {
+            const errorMessage = error.data?.message || "";
+
+            message.error(`Ошибка получения данных с сервера: ${errorMessage}`);
             message.error(extractErrorMessage(error));
-        }
+        })
 
     }, [dispatch]);
 
@@ -79,15 +80,21 @@ const CityInfoPage: React.FC = () => {
                                 dispatch(addPollution(newPollution));
                             }
                         })
-                        .catch((error) => {
-                            console.error('Ошибка при получении данных о загрязнении воздуха:', error);
-                            message.error(extractErrorMessage(error));
+                        .catch((error: any) => {
+                            const errorMessage = error.data?.message || "";
+
+                            console.error('Ошибка при получении данных о загрязнении воздуха:', errorMessage);
+                            message.error('Ошибка при получении данных о загрязнении воздуха!');
+                            message.error(errorMessage);
                         });
                 }
             })
-            .catch((error) => {
-                console.error('Ошибка при получении координат:', error);
-                message.error(extractErrorMessage(error));
+            .catch((error: any) => {
+                const errorMessage = error.data?.message || "";
+
+                console.error('Ошибка при получении координат:', errorMessage);
+                message.error('Ошибка при получении координат!');
+                message.error(errorMessage);
             });
     };
     

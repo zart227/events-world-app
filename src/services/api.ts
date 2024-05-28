@@ -4,7 +4,7 @@ import { CombinedData } from '../types/types';
 const SERVER_URL=process.env.REACT_APP_SERVER_URL || 'http://localhost';
 const SERVER_PORT=process.env.REACT_APP_SERVER_PORT || '3001';
 
-const baseUrl = `${SERVER_URL}:${SERVER_PORT}`;
+const baseUrl = `${SERVER_URL}:${SERVER_PORT}/api`;
 
 export const api = createApi({
     reducerPath: 'api',

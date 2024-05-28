@@ -9,6 +9,9 @@ import AppLayout from '../components/Layout/Layout';
 import AuthRoute from '../routes/AuthRoute';
 import PrivateRoute from '../routes/PrivateRoute';
 import { AuthProvider } from '../context/AuthContext';
+import ArticlesListPage from '../pages/Articles/ArticlesListPage'; 
+import ArticlePage from '../pages/Articles/ArticlePage';
+import ArticleCreatePage from '../pages/Articles/ArticleCreatePage'; // Import новых страниц
 
 const MainRouter: React.FC = () => {
   return (
@@ -30,6 +33,9 @@ const MainRouter: React.FC = () => {
               <Route path="" element={<CityInfoPage />} />
             </Route>
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/articles" element={<ArticlesListPage />} />
+            <Route path="/articles/create" element={<ArticleCreatePage />} />
+            <Route path="/articles/:id" element={<ArticlePage />} />
             <Route path="*" element={<Error404Page />} />
           </Route>
         </Routes>

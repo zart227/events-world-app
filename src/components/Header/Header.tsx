@@ -14,6 +14,7 @@ const AppHeader: React.FC = () => {
     if (path === '/register') return 'register';
     if (path.startsWith('/location')) return 'location';
     if (path.startsWith('/city-info')) return 'city-info';
+    if (path.startsWith('/articles')) return 'articles'; // Добавляем ссылку на статьи
     if (path === '/about') return 'about';
     return 'about';
   };
@@ -48,6 +49,9 @@ const AppHeader: React.FC = () => {
             </Menu.Item>
             <Menu.Item key="city-info">
                 <Link to="/city-info">Информация о городе</Link>
+            </Menu.Item>
+            <Menu.Item key="articles">
+                <Link to="/articles">Статьи</Link> 
             </Menu.Item>
             <Menu.Item key="email" style={{ marginLeft: 'auto' }}>
                 {userData?.email}
