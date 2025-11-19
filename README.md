@@ -1,46 +1,128 @@
-# Getting Started with Create React App
+# Pollution Data App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project is a web application for fetching and displaying air pollution data for various cities. It includes both frontend and backend components.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Search for air pollution data by city name
+- Display air pollution data in a table and chart
+- Store and retrieve historical pollution data from a MongoDB database
+- End-to-end testing with Cypress
+- Component testing and documentation with Storybook
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js (v14 or later)
+- MongoDB
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Installation
 
-### `npm test`
+1. **Clone the repository:**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+    ```bash
+    git clone https://github.com/your-username/pollution-data-app.git
+    cd pollution-data-app
+    ```
 
-### `npm run build`
+2. **Set up environment variables:**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+    Create a `.env` file in the root directory of the project and add the following variables:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    ```env
+    MONGO_URI=mongodb://localhost:27017
+    DB_NAME=pollutionData
+    SERVER_PORT=9100
+    REACT_APP_YANDEX_GEOCODER_API_KEY=your_yandex_geocoder_api_key
+    REACT_APP_OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
+    TEST_EMAIL=your_test_email@example.com
+    TEST_PASSWORD=your_test_password
+    ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. **Install dependencies:**
 
-### `npm run eject`
+    ```bash
+    npm install
+    ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+4. **Set up the database:**
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+    ```bash
+    npm run setup-db
+    ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+5. **Build the frontend:**
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+    ```bash
+    npm run build
+    ```
 
-## Learn More
+6. **Start the application:**
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+    ```bash
+    npm run start
+    ```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    This command will start both the backend server and the React frontend.
+
+## Additional Scripts
+
+- **Start the backend server in development mode:**
+
+    ```bash
+    npm run dev
+    ```
+
+    This command starts the backend server using nodemon, which automatically restarts the server when changes are made to the code.
+
+- **Start the React frontend in development mode:**
+
+    ```bash
+    npm run start-client
+    ```
+
+    This command starts only the React frontend in development mode. You can view it in your browser at [http://localhost:3000](http://localhost:3000).
+
+- **Open Cypress for end-to-end testing:**
+
+    ```bash
+    npm run cypress:open
+    ```
+
+    This command opens the Cypress test runner for running end-to-end tests.
+
+- **Start Storybook for component testing and documentation:**
+
+    ```bash
+    npm run storybook
+    ```
+
+    This command starts Storybook on [http://localhost:6006](http://localhost:6006), where you can view and interact with your components.
+
+- **Build Storybook:**
+
+    ```bash
+    npm run build-storybook
+    ```
+
+    This command builds the Storybook static site, which can be deployed for documentation purposes.
+
+## Folder Structure
+
+- **backend**: Contains the backend server code and database setup script.
+- **build**: Contains the production build of the React frontend.
+- **public**: Contains the public assets for the React frontend.
+- **src**: Contains the source code for the React frontend.
+  - **components**: React components.
+  - **pages**: React pages.
+  - **services**: API service definitions.
+  - **store**: Redux store setup.
+  - **types**: TypeScript types.
+  - **utils**: Utility functions.
+  - **stories**: Storybook stories for components.
+- **cypress**: Contains Cypress end-to-end tests and configurations.
+  - **e2e**: End-to-end test files.
+  - **support**: Custom commands and Cypress configurations.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
