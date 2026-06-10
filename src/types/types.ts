@@ -82,4 +82,22 @@ export type ArticleType = {
     title: string,
     short_desc: string | undefined,
     description: string | undefined,
+    author_id?: string | null,
+}
+
+export type ArticlesSort = 'created_at:desc' | 'created_at:asc' | 'title:asc' | 'title:desc';
+
+export type ArticlesQuery = {
+    page?: number,
+    limit?: number,
+    sort?: ArticlesSort,
+    q?: string,
+}
+
+export type ArticlesPage = {
+    items: ArticleType[],
+    total: number,
+    page: number,
+    limit: number,
+    totalPages: number,
 }

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { CreateArticleDto } from '../dto/article.dto.js';
+import type { CreateArticleDto, ListArticlesQueryDto } from '../dto/article.dto.js';
 import { getAuthUser } from '../middlewares/auth.js';
 import { getValidated } from '../middlewares/validate.js';
 import { articleService } from '../services/article.service.js';
@@ -11,9 +11,10 @@ export const articleController = {
     res.status(201).json(article);
   },
 
-  async getAll(_req: Request, res: Response): Promise<void> {
-    const articles = await articleService.getAll();
-    res.status(200).json(articles);
+  async getPage(req: Request, res: Response): Promise<void> {
+    const query = getValidated<ListArticlesQueryDto>(req, 'query');
+    const page = await articleService.getPage(query);
+    res.status(200).json(page);
   },
 
   async getById(req: Request, res: Response): Promise<void> {

@@ -1,11 +1,23 @@
 // src/pages/ArticlesListPage.tsx
-import React from 'react';
-import { Button, List, Spin, message } from 'antd';
+import React, { useState } from 'react';
+import { Button, Input, List, Select, Space, message } from 'antd';
 import { Link } from 'react-router-dom';
 import { useGetArticlesQuery, useDeleteAllArticlesMutation, useDeleteArticleMutation } from '../../services/articlesApi';
+import { ArticlesSort } from '../../types/types';
+
+const PAGE_SIZE = 10;
 
 const ArticlesListPage: React.FC = () => {
-  const { data: articles, isLoading, isFetching, refetch } = useGetArticlesQuery();
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<ArticlesSort>('created_at:desc');
+  const [search, setSearch] = useState<string>('');
+
+  const { data, isLoading, isFetching, refetch } = useGetArticlesQuery({
+    page,
+    limit: PAGE_SIZE,
+    sort,
+    ...(search ? { q: search } : {}),
+  });
   const [clearArticles] = useDeleteAllArticlesMutation();
   const [deleteArticle] = useDeleteArticleMutation();
 
@@ -29,12 +41,12 @@ const ArticlesListPage: React.FC = () => {
 		const errorMessage = error.data?.message || "";
 		message.error(`Ошибка при удалении статьи: ${errorMessage}`);    }
   };
-  
+
   return (
     <>
       <h1>Список статей</h1>
-	  <Button 
-	  	type="primary" 
+	  <Button
+	  	type="primary"
 		onClick={handleClearArticles}
 		style={{ marginBottom: '16px' }}
 	  >
@@ -43,12 +55,44 @@ const ArticlesListPage: React.FC = () => {
 	  <p>
         <Link to="/articles/create">Создать новую статью...</Link>
       </p>
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Input.Search
+          placeholder="Поиск по статьям"
+          allowClear
+          style={{ width: 280 }}
+          onSearch={(value) => {
+            setPage(1);
+            setSearch(value.trim());
+          }}
+        />
+        <Select<ArticlesSort>
+          value={sort}
+          style={{ width: 220 }}
+          onChange={(value) => {
+            setPage(1);
+            setSort(value);
+          }}
+          options={[
+            { value: 'created_at:desc', label: 'Сначала новые' },
+            { value: 'created_at:asc', label: 'Сначала старые' },
+            { value: 'title:asc', label: 'По заголовку (А-Я)' },
+            { value: 'title:desc', label: 'По заголовку (Я-А)' },
+          ]}
+        />
+      </Space>
       <List
         itemLayout="horizontal"
         bordered={true}
-        dataSource={articles}
+        dataSource={data?.items}
         rowKey="id"
         loading={isLoading || isFetching}
+        pagination={{
+          current: page,
+          pageSize: PAGE_SIZE,
+          total: data?.total ?? 0,
+          showSizeChanger: false,
+          onChange: (newPage) => setPage(newPage),
+        }}
         renderItem={(item) => (
           <List.Item
 		  actions={[

@@ -14,7 +14,7 @@ const LocationInputPage: React.FC = () => {
     const handleDataFetch = async (location: string) => {
         try {
             const locationData = await getLocationData(location);
-            const pollutionData = await getPollutionData(locationData.latitude, locationData.longitude);
+            const pollutionData = await getPollutionData(locationData.latitude, locationData.longitude, locationData.address);
             const formattedData = formatPollutionData(locationData, pollutionData);
 
             setData((prevData) => [...prevData, formattedData]);

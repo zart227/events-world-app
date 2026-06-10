@@ -1,21 +1,22 @@
 // src/services/articlesApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
-import { ArticleType } from '../types/types';
+import { ArticleType, ArticlesPage, ArticlesQuery } from '../types/types';
 import { baseQueryWithReauth } from './baseQuery';
-
-type ArticlesResponse = ArticleType[];
 
 export const articlesApi = createApi({
   reducerPath: 'articlesApi',
   baseQuery: baseQueryWithReauth,
   tagTypes: ['Articles'],
   endpoints: (builder) => ({
-    getArticles: builder.query<ArticlesResponse, void>({
-      query: () => '/articles',
+    getArticles: builder.query<ArticlesPage, ArticlesQuery | void>({
+      query: (params) => ({
+        url: '/articles',
+        params: params ?? undefined,
+      }),
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({ type: 'Articles', id } as const)),
+              ...result.items.map(({ id }) => ({ type: 'Articles', id } as const)),
               { type: 'Articles', id: 'LIST' },
             ]
           : [{ type: 'Articles', id: 'LIST' }],

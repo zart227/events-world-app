@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import { articleController } from '../controllers/article.controller.js';
-import { articleIdSchema, createArticleSchema } from '../dto/article.dto.js';
+import {
+  articleIdSchema,
+  createArticleSchema,
+  listArticlesQuerySchema,
+} from '../dto/article.dto.js';
 import { requireAuth, requireRole } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 
 export const articleRouter = Router();
 
-articleRouter.get('/', articleController.getAll);
+articleRouter.get('/', validate('query', listArticlesQuerySchema), articleController.getPage);
 articleRouter.get('/:id', validate('params', articleIdSchema), articleController.getById);
 articleRouter.post('/', requireAuth, validate('body', createArticleSchema), articleController.create);
 articleRouter.delete(

@@ -1,4 +1,9 @@
-import type { ArticleDto, CreateArticleDto } from '../dto/article.dto.js';
+import type {
+  ArticleDto,
+  ArticlesPageDto,
+  CreateArticleDto,
+  ListArticlesQueryDto,
+} from '../dto/article.dto.js';
 import { ForbiddenError, NotFoundError } from '../errors/app-error.js';
 import { articleRepository } from '../repositories/article.repository.js';
 import type { AuthUser } from './token.service.js';
@@ -8,8 +13,8 @@ export const articleService = {
     return articleRepository.create(data, author.id);
   },
 
-  async getAll(): Promise<ArticleDto[]> {
-    return articleRepository.findAll();
+  async getPage(query: ListArticlesQueryDto): Promise<ArticlesPageDto> {
+    return articleRepository.findPage(query);
   },
 
   async getById(id: string): Promise<ArticleDto> {

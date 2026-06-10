@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
+import swaggerUi from 'swagger-ui-express';
 import { config } from './config/env.js';
+import { openApiDocument } from './docs/openapi.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { authLimiter, globalLimiter } from './middlewares/rate-limit.js';
 import { requestLogger } from './middlewares/request-logger.js';
+import { healthRouter } from './routes/health.router.js';
 import { apiRouter } from './routes/index.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +29,9 @@ export function createApp(): Express {
       credentials: true,
     }),
   );
+
+  app.use(healthRouter);
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
   app.use('/api/auth', authLimiter);
   app.use('/api', globalLimiter);

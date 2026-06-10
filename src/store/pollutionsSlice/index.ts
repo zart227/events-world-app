@@ -23,8 +23,12 @@ const pollutionSlice = createSlice({
         console.error("Error:", err);
       });
     },
+    // Запись, пришедшая с сервера (WebSocket push) — без повторного POST
+    receivePollution: (state, action: PayloadAction<CombinedData>) => {
+      state.list = [action.payload, ...state.list];
+    },
   },
 });
 
-export const { setPollutionsList, addPollution } = pollutionSlice.actions;
+export const { setPollutionsList, addPollution, receivePollution } = pollutionSlice.actions;
 export default pollutionSlice.reducer;

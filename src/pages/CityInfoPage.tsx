@@ -1,18 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import {Button, Form, type FormProps, Input, Table, message} from 'antd';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Button, Form, type FormProps, Input, List, Space, Table, Tag, message } from 'antd';
 import { useSelector } from 'react-redux';
 import { Columns } from '../components/columns/Columns';
 import PollutionChart from '../components/PollutionChart/PollutionChart';
-import { geocoderApi } from '../services/geocoder';
-import { openWeatherMapApi } from '../services/openweathermap'; 
-import {useAppDispatch} from "../store";
-import { formatPollutionData } from '../utils/formatPollutionData';
+import { useAppDispatch } from '../store';
 import { getPollutionsList } from '../store/pollutionsSelectors';
-import { setPollutionsList, addPollution } from '../store/pollutionsSlice';
-import { LocationData, PollutionData } from '../types/types';
-import dayjs from 'dayjs';
+import { setPollutionsList, addPollution, receivePollution } from '../store/pollutionsSlice';
+import { CombinedData } from '../types/types';
 import { extractErrorMessage } from '../utils/extractErrorMessage';
 import api from '../utils/api';
+import { getPollutionByCity } from '../services/pollutionService';
+import {
+    getSubscriptions,
+    subscribeToCity,
+    unsubscribeFromCity,
+    Subscription,
+} from '../services/subscriptionsApi';
+import { getSocket, disconnectSocket } from '../services/socket';
 
 type FieldType = {
     address: string;
@@ -23,6 +27,8 @@ const CityInfoPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const pollutions = useSelector(getPollutionsList);
     const [submitDisabled, setSubmitDisabled] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
     const values = Form.useWatch([], form);
 
     useEffect(() => {
@@ -39,6 +45,35 @@ const CityInfoPage: React.FC = () => {
 
     }, [dispatch]);
 
+    const loadSubscriptions = useCallback(() => {
+        getSubscriptions()
+            .then(setSubscriptions)
+            .catch(() => undefined);
+    }, []);
+
+    useEffect(() => {
+        loadSubscriptions();
+    }, [loadSubscriptions]);
+
+    // WebSocket: подписка на комнаты городов и приём push-обновлений
+    useEffect(() => {
+        const socket = getSocket();
+
+        const onUpdate = (data: CombinedData) => {
+            dispatch(receivePollution(data));
+            message.info(`Обновлены данные по городу: ${data.address}`);
+        };
+        socket.on('pollution:update', onUpdate);
+        subscriptions.forEach((sub) => socket.emit('city:subscribe', sub.city));
+
+        return () => {
+            socket.off('pollution:update', onUpdate);
+            subscriptions.forEach((sub) => socket.emit('city:unsubscribe', sub.city));
+        };
+    }, [dispatch, subscriptions]);
+
+    useEffect(() => () => disconnectSocket(), []);
+
     useEffect(() => {
         form.validateFields({ validateOnly: true })
             .then(() => setSubmitDisabled(false))
@@ -46,57 +81,52 @@ const CityInfoPage: React.FC = () => {
     }, [form, values]);
 
     const handleSuccessSubmit: FormProps<FieldType>["onFinish"] = async (formData) => {
-        dispatch(geocoderApi.endpoints.getCoordsByAddress.initiate(formData.address))
-            .then(({data})  => {
-                const geocoderData = data;
-                form.resetFields();
-    
-                if (geocoderData?.response.GeoObjectCollection.featureMember.length) {
-                    const coords = geocoderData.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos.split(' ');
-                    const locationData: LocationData = {
-                        address: geocoderData.response.GeoObjectCollection.featureMember[0].GeoObject.metaDataProperty.GeocoderMetaData.text,
-                        latitude: coords[1],
-                        longitude: coords[0],
-                    };
-    
-                    dispatch(openWeatherMapApi.endpoints.getAirPollutionByCoords.initiate({ lat: locationData.latitude, lon: locationData.longitude }))
-                        .then(({data}) => {
-                            const pollutionData = data;
-    
-                            if (pollutionData) {
-                                const pollutionDetails: PollutionData = {
-                                    components: pollutionData.list[0].components,
-                                    aqi: pollutionData.list[0].main.aqi,
-                                    dateTime: dayjs.unix(pollutionData.list[0].dt ).format('DD.MM.YYYY HH:mm:ss'),
-                                };
-    
-                                const newPollution = formatPollutionData(locationData, pollutionDetails);
-                                dispatch(addPollution(newPollution));
-                            }
-                        })
-                        .catch((error: any) => {
-                            const errorMessage = error.data?.message || "";
+        setLoading(true);
+        try {
+            // Геокодирование и запрос к OpenWeatherMap выполняет бэкенд (с кэшем в Redis)
+            const data = await getPollutionByCity(formData.address);
+            form.resetFields();
+            dispatch(addPollution(data));
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || "";
 
-                            console.error('Ошибка при получении данных о загрязнении воздуха:', errorMessage);
-                            message.error('Ошибка при получении данных о загрязнении воздуха!');
-                            message.error(errorMessage);
-                        });
-                }
-            })
-            .catch((error: any) => {
-                const errorMessage = error.data?.message || "";
-
-                console.error('Ошибка при получении координат:', errorMessage);
-                message.error('Ошибка при получении координат!');
-                message.error(errorMessage);
-            });
+            console.error('Ошибка при получении данных о загрязнении воздуха:', errorMessage);
+            message.error('Ошибка при получении данных о загрязнении воздуха!');
+            if (errorMessage) message.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
-    
+
+    const handleSubscribe = async () => {
+        const city: string = form.getFieldValue('address');
+        if (!city || city.trim().length < 2) {
+            message.warning('Введите название города для подписки');
+            return;
+        }
+        try {
+            const sub = await subscribeToCity(city.trim());
+            message.success(`Подписка на «${sub.city}» оформлена`);
+            loadSubscriptions();
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Не удалось оформить подписку');
+        }
+    };
+
+    const handleUnsubscribe = async (sub: Subscription) => {
+        try {
+            await unsubscribeFromCity(sub.id);
+            message.success(`Подписка на «${sub.city}» удалена`);
+            loadSubscriptions();
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Не удалось удалить подписку');
+        }
+    };
 
     return (
         <>
             <h1>Информация о городе</h1>
-            <p>Функционал доработан с использованием Redux RTK Query. Результаты сохраняются в БД. Введите нужный адрес и нажмите на кнопку "Получить".</p>
+            <p>Введите название города — данные о загрязнении вернёт сервер (OpenWeatherMap + Redis-кэш). Подписавшись на город, вы будете получать обновления раз в час через WebSocket.</p>
 
             <Form
                 form={form}
@@ -121,13 +151,41 @@ const CityInfoPage: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        disabled={submitDisabled}
-                    >Получить</Button>
+                    <Space>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            loading={loading}
+                            disabled={submitDisabled}
+                        >Получить</Button>
+                        <Button onClick={handleSubscribe} disabled={submitDisabled}>
+                            Подписаться на город
+                        </Button>
+                    </Space>
                 </Form.Item>
             </Form>
+
+            {!!subscriptions.length && (
+                <List
+                    header="Мои подписки (обновление раз в час + push)"
+                    size="small"
+                    bordered
+                    style={{ maxWidth: 480, marginBottom: 24 }}
+                    dataSource={subscriptions}
+                    rowKey="id"
+                    renderItem={(sub) => (
+                        <List.Item
+                            actions={[
+                                <Button key="unsub" size="small" danger onClick={() => handleUnsubscribe(sub)}>
+                                    Отписаться
+                                </Button>,
+                            ]}
+                        >
+                            <Tag color="blue">{sub.city}</Tag> {sub.address}
+                        </List.Item>
+                    )}
+                />
+            )}
 
             {!!pollutions.length &&
                 <Table

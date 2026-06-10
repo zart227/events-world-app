@@ -25,6 +25,11 @@ const envSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   ADMIN_EMAILS: z.string().default(''),
   RATE_LIMIT_ENABLED: z.stringbool().default(true),
+  OPENWEATHERMAP_API_KEY: z.string().default(''),
+  OWM_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(1800),
+  GEOCODE_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
+  CRON_ENABLED: z.stringbool().default(true),
+  POLLUTION_REFRESH_CRON: z.string().default('0 * * * *'),
 });
 
 const parsed = envSchema
@@ -77,6 +82,15 @@ export const config = {
   },
   rateLimit: {
     enabled: env.RATE_LIMIT_ENABLED && env.NODE_ENV !== 'test',
+  },
+  owm: {
+    apiKey: env.OPENWEATHERMAP_API_KEY,
+    cacheTtlSeconds: env.OWM_CACHE_TTL_SECONDS,
+    geocodeCacheTtlSeconds: env.GEOCODE_CACHE_TTL_SECONDS,
+  },
+  cron: {
+    enabled: env.CRON_ENABLED && env.NODE_ENV !== 'test',
+    pollutionRefreshSchedule: env.POLLUTION_REFRESH_CRON,
   },
 } as const;
 
