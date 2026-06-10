@@ -15,8 +15,10 @@ const envSchema = z.object({
   CLIENT_PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGIN: z.string().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  MONGO_URI: z.string().default('mongodb://localhost:27017'),
-  DB_NAME: z.string().default('pollutionData'),
+  DATABASE_URL: z
+    .url({ protocol: /^postgres(ql)?$/ })
+    .default('postgresql://postgres:postgres@localhost:5432/events_world'),
+  PG_POOL_SIZE: z.coerce.number().int().positive().default(10),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -41,9 +43,9 @@ export const config = {
   log: {
     level: env.LOG_LEVEL,
   },
-  mongo: {
-    uri: env.MONGO_URI,
-    dbName: env.DB_NAME,
+  postgres: {
+    url: env.DATABASE_URL,
+    poolSize: env.PG_POOL_SIZE,
   },
 } as const;
 

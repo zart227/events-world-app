@@ -1,10 +1,11 @@
 import { createApp } from './app.js';
 import { config } from './config/env.js';
-import { closeMongo, connectMongo } from './db/mongo.js';
+import { runMigrations } from './db/migrate.js';
+import { closePool, pool } from './db/pool.js';
 import { logger } from './logger/logger.js';
 
 async function main(): Promise<void> {
-  await connectMongo();
+  await runMigrations(pool);
 
   const app = createApp();
   const server = app.listen(config.server.port, () => {
@@ -17,7 +18,7 @@ async function main(): Promise<void> {
       if (err) {
         logger.error({ err }, 'Error while closing HTTP server');
       }
-      await closeMongo();
+      await closePool();
       process.exit(err ? 1 : 0);
     });
   };

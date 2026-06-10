@@ -7,7 +7,7 @@ export const createArticleSchema = z.object({
 });
 
 export const articleIdSchema = z.object({
-  id: z.string().min(1),
+  id: z.uuid('Некорректный идентификатор статьи'),
 });
 
 export type CreateArticleDto = z.infer<typeof createArticleSchema>;

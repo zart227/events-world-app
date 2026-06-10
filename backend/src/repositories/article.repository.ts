@@ -1,56 +1,62 @@
-import { ObjectId, type Collection, type Document } from 'mongodb';
-import { getDb } from '../db/mongo.js';
+import { pool } from '../db/pool.js';
 import type { ArticleDto, CreateArticleDto } from '../dto/article.dto.js';
 
-const COLLECTION = 'articles';
-
-function collection(): Collection<Document> {
-  return getDb().collection(COLLECTION);
+interface ArticleRow {
+  id: string;
+  title: string;
+  short_desc: string | null;
+  description: string;
+  created_at: Date;
 }
 
-function toDto(doc: Document): ArticleDto {
+function toDto(row: ArticleRow): ArticleDto {
   return {
-    id: String(doc._id),
-    title: doc.title,
-    short_desc: doc.short_desc,
-    description: doc.description,
-    created_at: doc.created_at instanceof Date ? doc.created_at.toISOString() : doc.created_at,
+    id: row.id,
+    title: row.title,
+    short_desc: row.short_desc ?? undefined,
+    description: row.description,
+    created_at: row.created_at.toISOString(),
   };
-}
-
-function toObjectId(id: string): ObjectId | null {
-  return ObjectId.isValid(id) ? new ObjectId(id) : null;
 }
 
 export const articleRepository = {
   async create(data: CreateArticleDto): Promise<ArticleDto> {
-    const doc = { ...data, created_at: new Date() };
-    const result = await collection().insertOne(doc);
-    return toDto({ _id: result.insertedId, ...doc });
+    const { rows } = await pool.query<ArticleRow>(
+      `INSERT INTO articles (title, short_desc, description)
+       VALUES ($1, $2, $3)
+       RETURNING id, title, short_desc, description, created_at`,
+      [data.title, data.short_desc ?? null, data.description],
+    );
+    return toDto(rows[0]!);
   },
 
   async findAll(): Promise<ArticleDto[]> {
-    const docs = await collection().find({}).sort({ created_at: -1 }).toArray();
-    return docs.map(toDto);
+    const { rows } = await pool.query<ArticleRow>(
+      `SELECT id, title, short_desc, description, created_at
+       FROM articles
+       ORDER BY created_at DESC`,
+    );
+    return rows.map(toDto);
   },
 
   async findById(id: string): Promise<ArticleDto | null> {
-    const objectId = toObjectId(id);
-    if (!objectId) return null;
-    const doc = await collection().findOne({ _id: objectId });
-    return doc ? toDto(doc) : null;
+    const { rows } = await pool.query<ArticleRow>(
+      `SELECT id, title, short_desc, description, created_at
+       FROM articles
+       WHERE id = $1`,
+      [id],
+    );
+    return rows[0] ? toDto(rows[0]) : null;
   },
 
   async deleteById(id: string): Promise<number> {
-    const objectId = toObjectId(id);
-    if (!objectId) return 0;
-    const result = await collection().deleteOne({ _id: objectId });
-    return result.deletedCount;
+    const result = await pool.query('DELETE FROM articles WHERE id = $1', [id]);
+    return result.rowCount ?? 0;
   },
 
   async deleteAll(): Promise<number> {
-    const result = await collection().deleteMany({});
-    return result.deletedCount;
+    const result = await pool.query('DELETE FROM articles');
+    return result.rowCount ?? 0;
   },
 };
 
