@@ -17,5 +17,6 @@ export interface ArticleDto {
   title: string;
   short_desc?: string | undefined;
   description: string;
+  author_id: string | null;
   created_at: string;
 }

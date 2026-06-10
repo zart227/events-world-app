@@ -6,8 +6,11 @@ interface ArticleRow {
   title: string;
   short_desc: string | null;
   description: string;
+  author_id: string | null;
   created_at: Date;
 }
+
+const ARTICLE_COLUMNS = 'id, title, short_desc, description, author_id, created_at';
 
 function toDto(row: ArticleRow): ArticleDto {
   return {
@@ -15,24 +18,25 @@ function toDto(row: ArticleRow): ArticleDto {
     title: row.title,
     short_desc: row.short_desc ?? undefined,
     description: row.description,
+    author_id: row.author_id,
     created_at: row.created_at.toISOString(),
   };
 }
 
 export const articleRepository = {
-  async create(data: CreateArticleDto): Promise<ArticleDto> {
+  async create(data: CreateArticleDto, authorId: string): Promise<ArticleDto> {
     const { rows } = await pool.query<ArticleRow>(
-      `INSERT INTO articles (title, short_desc, description)
-       VALUES ($1, $2, $3)
-       RETURNING id, title, short_desc, description, created_at`,
-      [data.title, data.short_desc ?? null, data.description],
+      `INSERT INTO articles (title, short_desc, description, author_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING ${ARTICLE_COLUMNS}`,
+      [data.title, data.short_desc ?? null, data.description, authorId],
     );
     return toDto(rows[0]!);
   },
 
   async findAll(): Promise<ArticleDto[]> {
     const { rows } = await pool.query<ArticleRow>(
-      `SELECT id, title, short_desc, description, created_at
+      `SELECT ${ARTICLE_COLUMNS}
        FROM articles
        ORDER BY created_at DESC`,
     );
@@ -41,7 +45,7 @@ export const articleRepository = {
 
   async findById(id: string): Promise<ArticleDto | null> {
     const { rows } = await pool.query<ArticleRow>(
-      `SELECT id, title, short_desc, description, created_at
+      `SELECT ${ARTICLE_COLUMNS}
        FROM articles
        WHERE id = $1`,
       [id],

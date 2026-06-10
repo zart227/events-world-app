@@ -10,4 +10,5 @@ export type CredentialsDto = z.infer<typeof credentialsSchema>;
 export interface UserDto {
   id: string;
   email: string;
+  role: 'user' | 'admin';
 }

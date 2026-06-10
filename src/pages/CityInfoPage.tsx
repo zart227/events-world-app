@@ -12,9 +12,7 @@ import { setPollutionsList, addPollution } from '../store/pollutionsSlice';
 import { LocationData, PollutionData } from '../types/types';
 import dayjs from 'dayjs';
 import { extractErrorMessage } from '../utils/extractErrorMessage';
-
-const serverPort = process.env.REACT_APP_SERVER_PORT || '3001';
-const serverAddress = `//localhost:${serverPort}/api`;
+import api from '../utils/api';
 
 type FieldType = {
     address: string;
@@ -28,16 +26,12 @@ const CityInfoPage: React.FC = () => {
     const values = Form.useWatch([], form);
 
     useEffect(() => {
-        fetch(`${serverAddress}/pollutions`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-        })
-        .then((res) => res.json())
-        .then((data) => {
+        api.get('/pollutions')
+        .then(({ data }) => {
             dispatch(setPollutionsList(data));
-        })  
+        })
         .catch ((error: any) => {
-            const errorMessage = error.data?.message || "";
+            const errorMessage = error.response?.data?.message || "";
 
             message.error(`Ошибка получения данных с сервера: ${errorMessage}`);
             message.error(extractErrorMessage(error));

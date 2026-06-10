@@ -2,10 +2,12 @@ import { createApp } from './app.js';
 import { config } from './config/env.js';
 import { runMigrations } from './db/migrate.js';
 import { closePool, pool } from './db/pool.js';
+import { closeRedis, connectRedis } from './db/redis.js';
 import { logger } from './logger/logger.js';
 
 async function main(): Promise<void> {
   await runMigrations(pool);
+  await connectRedis();
 
   const app = createApp();
   const server = app.listen(config.server.port, () => {
@@ -18,6 +20,7 @@ async function main(): Promise<void> {
       if (err) {
         logger.error({ err }, 'Error while closing HTTP server');
       }
+      await closeRedis();
       await closePool();
       process.exit(err ? 1 : 0);
     });

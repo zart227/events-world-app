@@ -1,13 +1,21 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import api from "../utils/api";
+import { clearAuthStorage, setAccessToken } from "../utils/authToken";
 
-interface LoginDataInterface {
-    id: number;
+export interface AuthUser {
+    id: string;
     email: string;
+    role: 'user' | 'admin';
+}
+
+export interface AuthResponse {
+    user: AuthUser;
+    accessToken: string;
 }
 
 interface AuthContextInterface {
     user: string | null;
-    login: (user: LoginDataInterface, callback: VoidFunction) => void;
+    login: (data: AuthResponse, callback: VoidFunction) => void;
     logout: (callback: VoidFunction) => void;
     isLogin: boolean;
 }
@@ -18,14 +26,18 @@ export const useAuthContext = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<string | null>(window.localStorage.getItem('user'));
 
-    const login = (data: LoginDataInterface, callback: VoidFunction) => {
-        window.localStorage.setItem('user', JSON.stringify(data));
-        setUser(JSON.stringify(data));
+    const login = (data: AuthResponse, callback: VoidFunction) => {
+        const serialized = JSON.stringify(data.user);
+        window.localStorage.setItem('user', serialized);
+        setAccessToken(data.accessToken);
+        setUser(serialized);
         callback();
     };
 
     const logout = (callback: VoidFunction) => {
-        window.localStorage.removeItem('user');
+        // Отзываем refresh-токен на сервере; локальное состояние чистим в любом случае
+        api.post('/auth/logout').catch(() => undefined);
+        clearAuthStorage();
         setUser(null);
         callback();
     };

@@ -19,9 +19,26 @@ const envSchema = z.object({
     .url({ protocol: /^postgres(ql)?$/ })
     .default('postgresql://postgres:postgres@localhost:5432/events_world'),
   PG_POOL_SIZE: z.coerce.number().int().positive().default(10),
+  REDIS_URL: z.url({ protocol: /^redis$/ }).default('redis://localhost:6379'),
+  JWT_ACCESS_SECRET: z.string().min(16).default('dev-access-secret-change-me'),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  ADMIN_EMAILS: z.string().default(''),
+  RATE_LIMIT_ENABLED: z.stringbool().default(true),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = envSchema
+  .check((ctx) => {
+    if (ctx.value.NODE_ENV === 'production' && ctx.value.JWT_ACCESS_SECRET.startsWith('dev-')) {
+      ctx.issues.push({
+        code: 'custom',
+        message: 'JWT_ACCESS_SECRET must be set explicitly in production',
+        input: ctx.value.JWT_ACCESS_SECRET,
+        path: ['JWT_ACCESS_SECRET'],
+      });
+    }
+  })
+  .safeParse(process.env);
 
 if (!parsed.success) {
   // Логгер ещё не инициализирован — конфиг валидируется до всего остального
@@ -46,6 +63,20 @@ export const config = {
   postgres: {
     url: env.DATABASE_URL,
     poolSize: env.PG_POOL_SIZE,
+  },
+  redis: {
+    url: env.REDIS_URL,
+  },
+  auth: {
+    accessSecret: env.JWT_ACCESS_SECRET,
+    accessTtl: env.JWT_ACCESS_TTL,
+    refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+    adminEmails: env.ADMIN_EMAILS.split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  },
+  rateLimit: {
+    enabled: env.RATE_LIMIT_ENABLED && env.NODE_ENV !== 'test',
   },
 } as const;
 

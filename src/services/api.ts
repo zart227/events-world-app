@@ -1,14 +1,10 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { createApi } from '@reduxjs/toolkit/query/react';
 import { CombinedData } from '../types/types';
-
-const SERVER_URL=process.env.REACT_APP_SERVER_URL || 'http://localhost';
-const SERVER_PORT=process.env.REACT_APP_SERVER_PORT || '3001';
-
-const baseUrl = `${SERVER_URL}:${SERVER_PORT}/api`;
+import { baseQueryWithReauth } from './baseQuery';
 
 export const api = createApi({
     reducerPath: 'api',
-    baseQuery: fetchBaseQuery({ baseUrl }),
+    baseQuery: baseQueryWithReauth,
     endpoints: (builder) => ({
         saveHistory: builder.mutation<void, { location: string; pollutionData: CombinedData }>({
             query: ({ location, pollutionData }) => ({

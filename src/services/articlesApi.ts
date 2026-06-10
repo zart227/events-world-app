@@ -1,16 +1,13 @@
 // src/services/articlesApi.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import fetch from 'cross-fetch';
+import { createApi } from '@reduxjs/toolkit/query/react';
 import { ArticleType } from '../types/types';
-
-const SERVER_PORT = process.env.REACT_APP_SERVER_PORT || '3001';
-const baseUrl = `//localhost:${SERVER_PORT}/api`;
+import { baseQueryWithReauth } from './baseQuery';
 
 type ArticlesResponse = ArticleType[];
 
 export const articlesApi = createApi({
   reducerPath: 'articlesApi',
-  baseQuery: fetchBaseQuery({ baseUrl, fetchFn: fetch }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: ['Articles'],
   endpoints: (builder) => ({
     getArticles: builder.query<ArticlesResponse, void>({

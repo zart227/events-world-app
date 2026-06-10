@@ -1,12 +1,13 @@
 import type { Request, Response } from 'express';
 import type { CreateArticleDto } from '../dto/article.dto.js';
+import { getAuthUser } from '../middlewares/auth.js';
 import { getValidated } from '../middlewares/validate.js';
 import { articleService } from '../services/article.service.js';
 
 export const articleController = {
   async create(req: Request, res: Response): Promise<void> {
     const data = getValidated<CreateArticleDto>(req, 'body');
-    const article = await articleService.create(data);
+    const article = await articleService.create(data, getAuthUser(req));
     res.status(201).json(article);
   },
 
@@ -23,7 +24,7 @@ export const articleController = {
 
   async deleteById(req: Request, res: Response): Promise<void> {
     const { id } = getValidated<{ id: string }>(req, 'params');
-    await articleService.deleteById(id);
+    await articleService.deleteById(id, getAuthUser(req));
     res.status(204).send();
   },
 
