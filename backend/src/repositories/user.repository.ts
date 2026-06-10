@@ -33,7 +33,10 @@ export const userRepository = {
     });
   },
 
-  async findByEmail(email: string, client: pg.Pool | pg.PoolClient = pool): Promise<UserEntity | null> {
+  async findByEmail(
+    email: string,
+    client: pg.Pool | pg.PoolClient = pool,
+  ): Promise<UserEntity | null> {
     const { rows } = await client.query<UserEntity>(
       `SELECT ${USER_COLUMNS} FROM users WHERE email = $1`,
       [email],

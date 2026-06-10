@@ -88,9 +88,7 @@ function jsonBody(schema: unknown) {
 }
 
 function jsonResponse(description: string, schema?: unknown) {
-  return schema
-    ? { description, content: { 'application/json': { schema } } }
-    : { description };
+  return schema ? { description, content: { 'application/json': { schema } } } : { description };
 }
 
 const standardErrors = {
@@ -191,7 +189,11 @@ export const openApiDocument = {
         summary: 'Список статей: пагинация, сортировка, полнотекстовый поиск',
         parameters: [
           { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
-          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 } },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+          },
           {
             name: 'sort',
             in: 'query',
@@ -201,7 +203,12 @@ export const openApiDocument = {
               default: 'created_at:desc',
             },
           },
-          { name: 'q', in: 'query', schema: { type: 'string' }, description: 'Поисковый запрос (tsvector)' },
+          {
+            name: 'q',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Поисковый запрос (tsvector)',
+          },
         ],
         responses: {
           '200': jsonResponse('Страница статей', {
@@ -242,14 +249,18 @@ export const openApiDocument = {
       get: {
         tags: ['Articles'],
         summary: 'Статья по id',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
         responses: { '200': jsonResponse('OK', articleSchema), '404': standardErrors['404'] },
       },
       delete: {
         tags: ['Articles'],
         summary: 'Удалить статью (свою; чужую — только admin)',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
         responses: { '204': jsonResponse('Удалена'), ...standardErrors },
       },
     },
@@ -343,7 +354,9 @@ export const openApiDocument = {
         tags: ['Subscriptions'],
         summary: 'Отписаться',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
         responses: { '204': jsonResponse('Отписан'), '404': standardErrors['404'] },
       },
     },

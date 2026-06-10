@@ -12,7 +12,12 @@ export const articleRouter = Router();
 
 articleRouter.get('/', validate('query', listArticlesQuerySchema), articleController.getPage);
 articleRouter.get('/:id', validate('params', articleIdSchema), articleController.getById);
-articleRouter.post('/', requireAuth, validate('body', createArticleSchema), articleController.create);
+articleRouter.post(
+  '/',
+  requireAuth,
+  validate('body', createArticleSchema),
+  articleController.create,
+);
 articleRouter.delete(
   '/:id',
   requireAuth,

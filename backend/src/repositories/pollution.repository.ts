@@ -16,7 +16,8 @@ interface PollutionRow {
   created_at: Date;
 }
 
-const POLLUTION_COLUMNS = 'id, address, latitude, longitude, components, aqi, date_time, created_at';
+const POLLUTION_COLUMNS =
+  'id, address, latitude, longitude, components, aqi, date_time, created_at';
 
 function toDto(row: PollutionRow): PollutionRecordDto {
   return {

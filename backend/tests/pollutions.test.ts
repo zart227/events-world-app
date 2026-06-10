@@ -2,7 +2,13 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openWeatherMapClient } from '../src/clients/openweathermap.client.js';
-import { getTestApp, registerUser, samplePollution, truncateAll, type TestUser } from './helpers.js';
+import {
+  getTestApp,
+  registerUser,
+  samplePollution,
+  truncateAll,
+  type TestUser,
+} from './helpers.js';
 
 vi.mock('../src/clients/openweathermap.client.js', () => ({
   openWeatherMapClient: {

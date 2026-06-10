@@ -2,7 +2,7 @@ import type http from 'node:http';
 import { Server } from 'socket.io';
 import { config } from '../config/env.js';
 import { logger } from '../logger/logger.js';
-import { tokenService } from '../services/token.service.js';
+import { tokenService, type AuthUser } from '../services/token.service.js';
 
 let io: Server | null = null;
 
@@ -26,7 +26,7 @@ export function initSocket(server: http.Server): Server {
       return;
     }
     try {
-      socket.data['user'] = tokenService.verifyAccessToken(token);
+      (socket.data as { user: AuthUser }).user = tokenService.verifyAccessToken(token);
       next();
     } catch {
       next(new Error('Unauthorized'));
@@ -34,7 +34,7 @@ export function initSocket(server: http.Server): Server {
   });
 
   io.on('connection', (socket) => {
-    const user = socket.data['user'] as { id: string; email: string };
+    const { user } = socket.data as { user: AuthUser };
     logger.debug({ userId: user.id, socketId: socket.id }, 'WebSocket connected');
 
     socket.on('city:subscribe', (city: string) => {

@@ -1,128 +1,158 @@
-# Pollution Data App
+# events-world-app
 
-This project is a web application for fetching and displaying air pollution data for various cities. It includes both frontend and backend components.
+Fullstack-приложение для мониторинга загрязнения воздуха по городам: регистрация и вход (JWT), запрос качества воздуха через серверный прокси к OpenWeatherMap с Redis-кэшем, история запросов, графики, подписки на города с push-обновлениями (WebSocket + cron), раздел статей с полнотекстовым поиском.
 
-## Features
+## Стек
 
-- Search for air pollution data by city name
-- Display air pollution data in a table and chart
-- Store and retrieve historical pollution data from a MongoDB database
-- End-to-end testing with Cypress
-- Component testing and documentation with Storybook
+| Слой | Технологии |
+|---|---|
+| Backend | Node.js 22+, TypeScript (ESM), Express 5, PostgreSQL (`pg`, чистый SQL), Redis, socket.io, node-cron, pino, zod |
+| Frontend | React 18, TypeScript, Redux Toolkit (RTK Query), Ant Design, socket.io-client |
+| Тесты | vitest + supertest + testcontainers (бэкенд), Cypress (e2e фронта) |
+| Инфраструктура | npm workspaces, Docker Compose, GitHub Actions, ESLint + Prettier |
 
-## Prerequisites
+## Быстрый старт (одной командой)
 
-- Node.js (v14 or later)
-- MongoDB
+```bash
+cp .env.example .env   # заполните JWT_ACCESS_SECRET и OPENWEATHERMAP_API_KEY
+docker compose up --build
+```
 
-## Installation
+- Frontend: http://localhost:3000
+- API: http://localhost:3001/api
+- Swagger UI: http://localhost:3001/api/docs
+- Health: http://localhost:3001/health, readiness: http://localhost:3001/ready
 
-1. **Clone the repository:**
+Миграции применяются автоматически при старте бэкенда.
 
-    ```bash
-    git clone https://github.com/your-username/pollution-data-app.git
-    cd pollution-data-app
-    ```
+## Локальная разработка
 
-2. **Set up environment variables:**
+```bash
+npm install                 # ставит зависимости всех workspace'ов
 
-    Create a `.env` file in the root directory of the project and add the following variables:
+# инфраструктура (PostgreSQL + Redis)
+docker compose up -d postgres redis
 
-    ```env
-    MONGO_URI=mongodb://localhost:27017
-    DB_NAME=pollutionData
-    SERVER_PORT=9100
-    REACT_APP_YANDEX_GEOCODER_API_KEY=your_yandex_geocoder_api_key
-    REACT_APP_OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
-    TEST_EMAIL=your_test_email@example.com
-    TEST_PASSWORD=your_test_password
-    ```
+# бэкенд (tsx watch, порт 3001)
+cp backend/.env.example backend/.env
+npm run dev
 
-3. **Install dependencies:**
+# фронтенд (CRA dev-server, порт 3000)
+npm run start-client
+```
 
-    ```bash
-    npm install
-    ```
+## Архитектура бэкенда
 
-4. **Set up the database:**
+Слоистая архитектура с DTO между слоями:
 
-    ```bash
-    npm run setup-db
-    ```
+```
+HTTP → routes → middlewares (auth, validate, rate-limit) → controllers → services → repositories → PostgreSQL
+                                                                ├── clients (OpenWeatherMap)
+                                                                ├── cache (Redis)
+                                                                ├── jobs (node-cron)
+                                                                └── ws (socket.io)
+```
 
-5. **Build the frontend:**
+```
+backend/
+├── migrations/          # SQL-миграции (применяются раннером по порядку)
+├── src/
+│   ├── config/          # env-конфиг с валидацией схемы (zod) при старте
+│   ├── logger/          # pino
+│   ├── errors/          # AppError → NotFoundError, ConflictError, UnauthorizedError...
+│   ├── middlewares/     # requireAuth, requireRole, validate(zod), error-handler,
+│   │                    # request-id + pino-http, rate-limit (Redis store)
+│   ├── dto/             # zod-схемы запросов + типы ответов
+│   ├── routes/          # маршруты (auth, articles, pollutions, subscriptions, health)
+│   ├── controllers/     # тонкие контроллеры
+│   ├── services/        # бизнес-логика (auth, token, article, pollution, subscription, cache)
+│   ├── repositories/    # SQL-запросы (pg, без ORM)
+│   ├── clients/         # OpenWeatherMap (geocoding + air pollution)
+│   ├── jobs/            # cron: ежечасное обновление городов из подписок
+│   ├── ws/              # socket.io: комнаты city:<город>, push при обновлении
+│   ├── db/              # пул pg, раннер миграций, redis-клиент
+│   └── docs/            # OpenAPI-спецификация (/api/docs)
+└── tests/               # vitest + supertest (testcontainers), unit-тесты сервисов
+```
 
-    ```bash
-    npm run build
-    ```
+Особенности:
 
-6. **Start the application:**
+- **Аутентификация**: bcrypt; JWT access (15 мин) + refresh (httpOnly cookie, 30 дней) с ротацией; refresh-токены хранятся в БД (sha256-хэш), отзыв при logout, повторное использование уже отозванного токена инвалидирует все сессии пользователя.
+- **Роли** `user`/`admin`: удаление чужих статей и очистка истории — только admin (`requireRole('admin')`). Email из `ADMIN_EMAILS` получает роль admin при регистрации.
+- **Rate limiting**: `/api/auth/*` — 20 запросов / 15 мин, глобально — 300 / мин (express-rate-limit + Redis store).
+- **Кэш OWM**: ответы по координатам кэшируются в Redis на 30 минут (TTL), геокодинг — на сутки. Ключ API не покидает сервер.
+- **Транзакции**: регистрация (users + user_settings), ротация refresh-токена.
+- **Graceful shutdown**: по SIGTERM/SIGINT закрываются cron, socket.io, HTTP-сервер, пулы Redis и PostgreSQL.
 
-    ```bash
-    npm run start
-    ```
+## Схема БД
 
-    This command will start both the backend server and the React frontend.
+```
+users                        refresh_tokens
+├── id uuid PK               ├── id uuid PK
+├── email text UNIQUE        ├── user_id uuid FK → users (CASCADE)
+├── password_hash text       ├── token_hash text UNIQUE (sha256)
+├── role user|admin          ├── expires_at timestamptz
+└── created_at               ├── revoked_at timestamptz NULL
+                             └── created_at
+user_settings
+├── user_id uuid PK FK       city_subscriptions
+└── default_city text        ├── id uuid PK
+                             ├── user_id uuid FK → users (CASCADE)
+articles                     ├── city text  (UNIQUE user_id+city)
+├── id uuid PK               ├── address text
+├── title text               ├── latitude/longitude numeric(9,6)
+├── short_desc text          └── created_at
+├── description text
+├── author_id uuid FK        pollution_history
+├── search_vector tsvector   ├── id uuid PK
+│   (GENERATED, GIN-индекс)  ├── user_id uuid FK → users (SET NULL)
+└── created_at (индекс)      ├── address text
+                             ├── latitude/longitude numeric(9,6) (индекс)
+                             ├── components jsonb
+                             ├── aqi smallint (1..5)
+                             ├── date_time text
+                             └── created_at (индекс)
+```
 
-## Additional Scripts
+## Эндпоинты API
 
-- **Start the backend server in development mode:**
+Полная спецификация — Swagger UI на `/api/docs`.
 
-    ```bash
-    npm run dev
-    ```
+| Метод | Путь | Доступ | Описание |
+|---|---|---|---|
+| POST | `/api/auth/register` | публичный | Регистрация, выдаёт access + refresh cookie |
+| POST | `/api/auth/login` | публичный | Вход |
+| POST | `/api/auth/refresh` | refresh cookie | Ротация refresh, новый access |
+| POST | `/api/auth/logout` | refresh cookie | Отзыв текущего refresh-токена |
+| POST | `/api/auth/logout-all` | Bearer | Отзыв всех сессий |
+| GET | `/api/articles?page=&limit=&sort=&q=` | публичный | Пагинация, сортировка, полнотекстовый поиск (tsvector) |
+| GET | `/api/articles/:id` | публичный | Статья по id |
+| POST | `/api/articles` | Bearer | Создать статью |
+| DELETE | `/api/articles/:id` | Bearer | Удалить свою статью (чужую — admin) |
+| DELETE | `/api/articles` | admin | Удалить все статьи |
+| GET | `/api/pollutions` | Bearer | История (user — своя, admin — вся) |
+| POST | `/api/pollutions` | Bearer | Сохранить запись в историю |
+| DELETE | `/api/pollutions` | admin | Очистить историю |
+| GET | `/api/pollutions/current?city=` (или `lat=&lon=`) | Bearer | Прокси OWM с Redis-кэшем 30 мин |
+| GET | `/api/subscriptions` | Bearer | Мои подписки на города |
+| POST | `/api/subscriptions` | Bearer | Подписаться на город |
+| DELETE | `/api/subscriptions/:id` | Bearer | Отписаться |
+| GET | `/health`, `/ready` | публичный | Liveness / readiness (PostgreSQL + Redis) |
+| GET | `/api/docs` | публичный | Swagger UI |
 
-    This command starts the backend server using nodemon, which automatically restarts the server when changes are made to the code.
+WebSocket (socket.io, auth по access-токену): события `city:subscribe` / `city:unsubscribe`, push `pollution:update` при обновлении данных фоновой задачей (раз в час по городам из подписок).
 
-- **Start the React frontend in development mode:**
+## Тесты
 
-    ```bash
-    npm run start-client
-    ```
+```bash
+npm test          # бэкенд: vitest + supertest, PostgreSQL и Redis в testcontainers
+npm run lint      # ESLint (typescript-eslint, type-checked)
+npm run typecheck # tsc --noEmit
 
-    This command starts only the React frontend in development mode. You can view it in your browser at [http://localhost:3000](http://localhost:3000).
+# e2e фронта (нужны запущенные бэкенд и фронтенд)
+npm run cypress:open -w @events-world/frontend
+```
 
-- **Open Cypress for end-to-end testing:**
+## CI
 
-    ```bash
-    npm run cypress:open
-    ```
-
-    This command opens the Cypress test runner for running end-to-end tests.
-
-- **Start Storybook for component testing and documentation:**
-
-    ```bash
-    npm run storybook
-    ```
-
-    This command starts Storybook on [http://localhost:6006](http://localhost:6006), where you can view and interact with your components.
-
-- **Build Storybook:**
-
-    ```bash
-    npm run build-storybook
-    ```
-
-    This command builds the Storybook static site, which can be deployed for documentation purposes.
-
-## Folder Structure
-
-- **backend**: Contains the backend server code and database setup script.
-- **build**: Contains the production build of the React frontend.
-- **public**: Contains the public assets for the React frontend.
-- **src**: Contains the source code for the React frontend.
-  - **components**: React components.
-  - **pages**: React pages.
-  - **services**: API service definitions.
-  - **store**: Redux store setup.
-  - **types**: TypeScript types.
-  - **utils**: Utility functions.
-  - **stories**: Storybook stories for components.
-- **cypress**: Contains Cypress end-to-end tests and configurations.
-  - **e2e**: End-to-end test files.
-  - **support**: Custom commands and Cypress configurations.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+GitHub Actions (`.github/workflows/ci.yml`): на PR и push в `main` — lint, typecheck, тесты бэкенда (testcontainers), сборка фронтенда.

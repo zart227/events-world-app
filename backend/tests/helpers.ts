@@ -60,7 +60,16 @@ export const samplePollution = {
   address: 'Москва',
   latitude: '55.75',
   longitude: '37.61',
-  components: { co: 201.94, no: 0.01, no2: 0.77, o3: 68.66, so2: 0.64, pm2_5: 0.5, pm10: 0.54, nh3: 0.12 },
+  components: {
+    co: 201.94,
+    no: 0.01,
+    no2: 0.77,
+    o3: 68.66,
+    so2: 0.64,
+    pm2_5: 0.5,
+    pm10: 0.54,
+    nh3: 0.12,
+  },
   aqi: 2,
   dateTime: '01.06.2026 12:00:00',
 };

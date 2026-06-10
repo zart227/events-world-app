@@ -51,7 +51,10 @@ describe('authService (unit)', () => {
     users.findByEmail.mockResolvedValue(null);
     users.createWithSettings.mockResolvedValue(storedUser);
 
-    const result = await authService.register({ email: 'Unit@Test.Local', password: 'password123' });
+    const result = await authService.register({
+      email: 'Unit@Test.Local',
+      password: 'password123',
+    });
 
     const args = users.createWithSettings.mock.calls[0]![0];
     expect(args.email).toBe('unit@test.local'); // нормализация email

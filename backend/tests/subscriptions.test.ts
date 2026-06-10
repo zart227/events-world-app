@@ -3,7 +3,13 @@ import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openWeatherMapClient } from '../src/clients/openweathermap.client.js';
 import { refreshSubscribedCities } from '../src/jobs/pollution-refresh.job.js';
-import { samplePollution, getTestApp, registerUser, truncateAll, type TestUser } from './helpers.js';
+import {
+  samplePollution,
+  getTestApp,
+  registerUser,
+  truncateAll,
+  type TestUser,
+} from './helpers.js';
 
 vi.mock('../src/clients/openweathermap.client.js', () => ({
   openWeatherMapClient: {

@@ -70,7 +70,8 @@ export const articleRepository = {
       [search, query.limit, offset],
     );
 
-    const total = rows.length > 0 ? Number.parseInt(rows[0]!.total, 10) : await this.countSearch(search);
+    const total =
+      rows.length > 0 ? Number.parseInt(rows[0]!.total, 10) : await this.countSearch(search);
     return {
       items: rows.map(toDto),
       total,

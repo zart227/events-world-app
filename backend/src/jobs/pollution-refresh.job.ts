@@ -37,7 +37,11 @@ export async function refreshSubscribedCities(): Promise<void> {
       };
 
       // Освежаем кэш, чтобы /current отдавал те же данные
-      await cacheService.set(`owm:air:${lat.toFixed(4)}:${lon.toFixed(4)}`, dto, config.owm.cacheTtlSeconds);
+      await cacheService.set(
+        `owm:air:${lat.toFixed(4)}:${lon.toFixed(4)}`,
+        dto,
+        config.owm.cacheTtlSeconds,
+      );
 
       for (const userId of entry.userIds) {
         await pollutionRepository.create(

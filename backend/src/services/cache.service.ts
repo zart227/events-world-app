@@ -18,7 +18,9 @@ export const cacheService = {
 
   async set(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     try {
-      await redis.set(key, JSON.stringify(value), { expiration: { type: 'EX', value: ttlSeconds } });
+      await redis.set(key, JSON.stringify(value), {
+        expiration: { type: 'EX', value: ttlSeconds },
+      });
     } catch (err) {
       logger.warn({ err, key }, 'Cache write failed');
     }

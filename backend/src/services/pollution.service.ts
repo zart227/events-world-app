@@ -45,7 +45,11 @@ export const pollutionService = {
   },
 
   /** Качество воздуха по координатам (кэш в Redis, ключ — координаты). */
-  async getCurrentByCoords(lat: number, lon: number, address: string): Promise<CurrentPollutionDto> {
+  async getCurrentByCoords(
+    lat: number,
+    lon: number,
+    address: string,
+  ): Promise<CurrentPollutionDto> {
     const key = airCacheKey(lat, lon);
     const cached = await cacheService.get<CurrentPollutionDto>(key);
     if (cached) {

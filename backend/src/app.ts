@@ -14,7 +14,7 @@ import { healthRouter } from './routes/health.router.js';
 import { apiRouter } from './routes/index.js';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const frontendBuildDir = path.resolve(dirname, '../../build');
+const frontendBuildDir = path.resolve(dirname, '../../frontend/build');
 
 export function createApp(): Express {
   const app = express();

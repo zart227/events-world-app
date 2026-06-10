@@ -17,7 +17,11 @@ beforeEach(async () => {
   user = await registerUser(app, 'user@test.local');
 });
 
-async function createArticle(token: string, title: string, description = 'Описание'): Promise<string> {
+async function createArticle(
+  token: string,
+  title: string,
+  description = 'Описание',
+): Promise<string> {
   const res = await request(app)
     .post('/api/articles')
     .set('Authorization', `Bearer ${token}`)

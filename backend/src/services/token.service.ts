@@ -62,7 +62,10 @@ export const tokenService = {
       throw new UnauthorizedError('Refresh-токен не найден');
     }
     if (stored.revoked_at) {
-      logger.warn({ userId: stored.user_id }, 'Refresh token reuse detected, revoking all sessions');
+      logger.warn(
+        { userId: stored.user_id },
+        'Refresh token reuse detected, revoking all sessions',
+      );
       await refreshTokenRepository.revokeAllForUser(stored.user_id);
       throw new UnauthorizedError('Refresh-токен отозван');
     }

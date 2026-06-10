@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { UnauthorizedError } from '../../src/errors/app-error.js';
 import { tokenService } from '../../src/services/token.service.js';
 
-const user = { id: '7d9a1b5e-0000-4000-8000-000000000001', email: 'unit@test.local', role: 'user' as const };
+const user = {
+  id: '7d9a1b5e-0000-4000-8000-000000000001',
+  email: 'unit@test.local',
+  role: 'user' as const,
+};
 
 describe('tokenService (unit)', () => {
   it('подписывает и верифицирует access-токен', () => {

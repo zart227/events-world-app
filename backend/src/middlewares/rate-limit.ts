@@ -14,7 +14,11 @@ function ensureRedis(): Promise<void> {
   return redisReady;
 }
 
-function createLimiter(options: { windowMs: number; limit: number; prefix: string }): RequestHandler {
+function createLimiter(options: {
+  windowMs: number;
+  limit: number;
+  prefix: string;
+}): RequestHandler {
   if (!config.rateLimit.enabled) {
     return passthrough;
   }
