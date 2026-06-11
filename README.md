@@ -309,8 +309,6 @@ npm run start-client     # CRA dev-server, порт 3000
 
 ### Swagger / OpenAPI
 
-Да — в проекте есть **полная интерактивная документация API** (аналог Swagger):
-
 | Ресурс               | URL                                         |
 | -------------------- | ------------------------------------------- |
 | **Swagger UI**       | http://localhost:3001/api/docs              |
