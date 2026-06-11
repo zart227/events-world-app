@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "sub-1",
+      "city": "Казань",
+      "address": "Казань, Республика Татарстан",
+      "latitude": "55.796289",
+      "longitude": "49.108795",
+      "created_at": "2024-06-10T08:00:00.000Z"
+    }
+  ],
+  "newSubscription": {
+    "id": "sub-new",
+    "city": "Москва",
+    "address": "Москва",
+    "latitude": "55.755826",
+    "longitude": "37.6173",
+    "created_at": "2024-06-15T16:00:00.000Z"
+  }
+}

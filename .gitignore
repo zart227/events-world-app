@@ -140,6 +140,7 @@ dist
 
 # production
 /build
+frontend/build
 
 # misc
 .DS_Store
@@ -154,3 +155,13 @@ yarn-error.log*
 
 .env
 *.zip
+
+# Prisma generated client
+backend/src/generated/
+
+# Storybook build output
+frontend/storybook-static/
+
+# Cypress artifacts
+frontend/cypress/screenshots/
+frontend/cypress/videos/
