@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { UnauthorizedError } from '../errors/app-error.js';
 import { logger } from '../logger/logger.js';
-import { withTransaction } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import {
   refreshTokenRepository,
   type RefreshTokenEntity,
@@ -75,11 +75,11 @@ export const tokenService = {
 
     const newToken = randomBytes(48).toString('base64url');
     const expiresAt = new Date(Date.now() + config.auth.refreshTtlDays * 24 * 60 * 60 * 1000);
-    await withTransaction(async (client) => {
-      await refreshTokenRepository.revokeById(stored.id, client);
+    await prisma.$transaction(async (tx) => {
+      await refreshTokenRepository.revokeById(stored.id, tx);
       await refreshTokenRepository.create(
         { userId: stored.user_id, tokenHash: hashToken(newToken), expiresAt },
-        client,
+        tx,
       );
     });
 

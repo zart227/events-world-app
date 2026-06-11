@@ -16,7 +16,8 @@ RUN --mount=type=cache,target=/root/.npm \
     || npm ci --workspace @events-world/backend
 
 FROM deps AS build
-COPY backend/tsconfig.json backend/tsconfig.build.json backend/
+COPY backend/tsconfig.json backend/tsconfig.build.json backend/prisma.config.ts backend/
+COPY backend/prisma backend/prisma
 COPY backend/src backend/src
 RUN npm run build -w @events-world/backend
 
@@ -31,11 +32,13 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY backend/package.json backend/
-COPY backend/migrations backend/migrations
+COPY backend/prisma backend/prisma
+COPY backend/prisma.config.ts backend/
 COPY --from=build /app/backend/dist backend/dist
+COPY --from=build /app/backend/src/generated backend/src/generated
 
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
   CMD node -e "fetch('http://localhost:'+(process.env.SERVER_PORT||3001)+'/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "backend/dist/server.js"]
+CMD ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/server.js"]

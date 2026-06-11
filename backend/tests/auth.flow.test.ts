@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { pool } from '../src/db/pool.js';
+import { prisma } from '../src/db/prisma.js';
 import { extractRefreshCookie, getTestApp, registerUser, truncateAll } from './helpers.js';
 
 let app: Express;
@@ -29,10 +29,10 @@ describe('Auth flow', () => {
     );
     expect(cookie).toContain('HttpOnly');
 
-    const { rows } = await pool.query('SELECT * FROM user_settings WHERE user_id = $1', [
-      res.body.user.id,
-    ]);
-    expect(rows).toHaveLength(1);
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: res.body.user.id },
+    });
+    expect(settings).not.toBeNull();
   });
 
   it('выдаёт роль admin для email из ADMIN_EMAILS', async () => {
@@ -42,11 +42,11 @@ describe('Auth flow', () => {
 
   it('хранит пароль в виде bcrypt-хэша', async () => {
     const user = await registerUser(app, 'hash@test.local');
-    const { rows } = await pool.query<{ password_hash: string }>(
-      'SELECT password_hash FROM users WHERE id = $1',
-      [user.id],
-    );
-    expect(rows[0]!.password_hash).toMatch(/^\$2[aby]\$/);
+    const stored = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+    expect(stored!.passwordHash).toMatch(/^\$2[aby]\$/);
   });
 
   it('возвращает 409 при повторной регистрации', async () => {

@@ -1,75 +1,70 @@
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import type {
   PollutionComponentsDto,
   PollutionRecordDto,
   SavePollutionDto,
 } from '../dto/pollution.dto.js';
 
-interface PollutionRow {
-  id: string;
-  address: string;
-  latitude: string;
-  longitude: string;
-  components: PollutionComponentsDto;
-  aqi: number;
-  date_time: string;
-  created_at: Date;
+function formatCoordinate(value: { toString(): string }): string {
+  return String(Number.parseFloat(value.toString()));
 }
 
-const POLLUTION_COLUMNS =
-  'id, address, latitude, longitude, components, aqi, date_time, created_at';
-
-function toDto(row: PollutionRow): PollutionRecordDto {
+function toDto(row: {
+  id: string;
+  address: string;
+  latitude: { toString(): string };
+  longitude: { toString(): string };
+  components: unknown;
+  aqi: number;
+  dateTime: string;
+  createdAt: Date;
+}): PollutionRecordDto {
   return {
     id: row.id,
     address: row.address,
-    // numeric приходит строкой вида "55.750000" — убираем хвостовые нули
-    latitude: String(Number.parseFloat(row.latitude)),
-    longitude: String(Number.parseFloat(row.longitude)),
-    components: row.components,
+    latitude: formatCoordinate(row.latitude),
+    longitude: formatCoordinate(row.longitude),
+    components: row.components as PollutionComponentsDto,
     aqi: row.aqi,
-    dateTime: row.date_time,
-    created_at: row.created_at.toISOString(),
+    dateTime: row.dateTime,
+    created_at: row.createdAt.toISOString(),
   };
 }
 
 export const pollutionRepository = {
   async create(data: SavePollutionDto, userId: string | null = null): Promise<PollutionRecordDto> {
-    const { rows } = await pool.query<PollutionRow>(
-      `INSERT INTO pollution_history (address, latitude, longitude, components, aqi, date_time, user_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING ${POLLUTION_COLUMNS}`,
-      [
-        data.address,
-        data.latitude,
-        data.longitude,
-        data.components,
-        data.aqi,
-        data.dateTime,
+    const row = await prisma.pollutionHistory.create({
+      data: {
+        address: data.address,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        components: data.components,
+        aqi: data.aqi,
+        dateTime: data.dateTime,
         userId,
-      ],
-    );
-    return toDto(rows[0]!);
+      },
+    });
+    return toDto(row);
   },
 
   async findAll(): Promise<PollutionRecordDto[]> {
-    const { rows } = await pool.query<PollutionRow>(
-      `SELECT ${POLLUTION_COLUMNS} FROM pollution_history ORDER BY created_at ASC`,
-    );
+    const rows = await prisma.pollutionHistory.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
     return rows.map(toDto);
   },
 
   async findAllByUser(userId: string): Promise<PollutionRecordDto[]> {
-    const { rows } = await pool.query<PollutionRow>(
-      `SELECT ${POLLUTION_COLUMNS} FROM pollution_history WHERE user_id = $1 ORDER BY created_at ASC`,
-      [userId],
-    );
+    const rows = await prisma.pollutionHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
     return rows.map(toDto);
   },
 
   async deleteAll(): Promise<number> {
-    const result = await pool.query('DELETE FROM pollution_history');
-    return result.rowCount ?? 0;
+    const result = await prisma.pollutionHistory.deleteMany();
+    return result.count;
   },
 };
 

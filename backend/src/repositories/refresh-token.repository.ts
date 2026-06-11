@@ -1,5 +1,5 @@
-import type pg from 'pg';
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import type { Prisma } from '../generated/prisma/client.js';
 
 export interface RefreshTokenEntity {
   id: string;
@@ -10,48 +10,66 @@ export interface RefreshTokenEntity {
   created_at: Date;
 }
 
-const COLUMNS = 'id, user_id, token_hash, expires_at, revoked_at, created_at';
+type DbClient = Prisma.TransactionClient | typeof prisma;
+
+function toEntity(row: {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}): RefreshTokenEntity {
+  return {
+    id: row.id,
+    user_id: row.userId,
+    token_hash: row.tokenHash,
+    expires_at: row.expiresAt,
+    revoked_at: row.revokedAt,
+    created_at: row.createdAt,
+  };
+}
 
 export const refreshTokenRepository = {
   async create(
     data: { userId: string; tokenHash: string; expiresAt: Date },
-    client: pg.Pool | pg.PoolClient = pool,
+    client: DbClient = prisma,
   ): Promise<RefreshTokenEntity> {
-    const { rows } = await client.query<RefreshTokenEntity>(
-      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-       VALUES ($1, $2, $3)
-       RETURNING ${COLUMNS}`,
-      [data.userId, data.tokenHash, data.expiresAt],
-    );
-    return rows[0]!;
+    const row = await client.refreshToken.create({
+      data: {
+        userId: data.userId,
+        tokenHash: data.tokenHash,
+        expiresAt: data.expiresAt,
+      },
+    });
+    return toEntity(row);
   },
 
   async findByHash(tokenHash: string): Promise<RefreshTokenEntity | null> {
-    const { rows } = await pool.query<RefreshTokenEntity>(
-      `SELECT ${COLUMNS} FROM refresh_tokens WHERE token_hash = $1`,
-      [tokenHash],
-    );
-    return rows[0] ?? null;
+    const row = await prisma.refreshToken.findUnique({ where: { tokenHash } });
+    return row ? toEntity(row) : null;
   },
 
-  async revokeById(id: string, client: pg.Pool | pg.PoolClient = pool): Promise<void> {
-    await client.query(
-      'UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL',
-      [id],
-    );
+  async revokeById(id: string, client: DbClient = prisma): Promise<void> {
+    await client.refreshToken.updateMany({
+      where: { id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   },
 
   async revokeAllForUser(userId: string): Promise<number> {
-    const result = await pool.query(
-      'UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL',
-      [userId],
-    );
-    return result.rowCount ?? 0;
+    const result = await prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count;
   },
 
   async deleteExpired(): Promise<number> {
-    const result = await pool.query('DELETE FROM refresh_tokens WHERE expires_at < now()');
-    return result.rowCount ?? 0;
+    const result = await prisma.refreshToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+    return result.count;
   },
 };
 

@@ -302,9 +302,20 @@ export const openApiDocument = {
     '/api/pollutions/current': {
       get: {
         tags: ['Pollutions'],
-        summary: 'Текущее загрязнение по городу (прокси OWM, Redis-кэш 30 мин)',
+        summary: 'Текущее загрязнение (прокси OWM, Redis-кэш 30 мин)',
+        description: 'Укажите ?city= либо ?lat=&lon= (address опционален).',
         security: [{ bearerAuth: [] }],
-        parameters: [{ name: 'city', in: 'query', required: true, schema: { type: 'string' } }],
+        parameters: [
+          { name: 'city', in: 'query', schema: { type: 'string' }, description: 'Название города' },
+          { name: 'lat', in: 'query', schema: { type: 'number', minimum: -90, maximum: 90 } },
+          { name: 'lon', in: 'query', schema: { type: 'number', minimum: -180, maximum: 180 } },
+          {
+            name: 'address',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Подпись для lat/lon',
+          },
+        ],
         responses: {
           '200': jsonResponse('OK', {
             type: 'object',

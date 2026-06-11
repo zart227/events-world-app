@@ -31,6 +31,9 @@ export function createApp(): Express {
   );
 
   app.use(healthRouter);
+  app.get('/api/docs/openapi.json', (_req, res) => {
+    res.json(openApiDocument);
+  });
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
   app.use('/api/auth', authLimiter);

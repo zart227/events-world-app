@@ -1,8 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
-import { runMigrations } from '../src/db/migrate.js';
-import { pool } from '../src/db/pool.js';
+import { prisma, runMigrations } from '../src/db/prisma.js';
 import { connectRedis, redis } from '../src/db/redis.js';
 
 let appInstance: Express | null = null;
@@ -10,17 +9,19 @@ let appInstance: Express | null = null;
 /** Инициализирует приложение (миграции + Redis) один раз на воркер. */
 export async function getTestApp(): Promise<Express> {
   if (!appInstance) {
-    await runMigrations(pool);
+    runMigrations();
     await connectRedis();
+    await prisma.$connect();
     appInstance = createApp();
   }
   return appInstance;
 }
 
 export async function truncateAll(): Promise<void> {
-  await pool.query(
-    'TRUNCATE users, refresh_tokens, user_settings, articles, pollution_history, city_subscriptions CASCADE',
-  );
+  await prisma.$executeRaw`
+    TRUNCATE users, refresh_tokens, user_settings, articles,
+             pollution_history, city_subscriptions CASCADE
+  `;
   await redis.flushAll();
 }
 

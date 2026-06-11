@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import { redis } from '../db/redis.js';
 
 export const healthRouter = Router();
@@ -14,7 +14,7 @@ healthRouter.get('/ready', async (_req, res) => {
   const checks: Record<string, 'ok' | 'fail'> = { postgres: 'fail', redis: 'fail' };
 
   try {
-    await pool.query('SELECT 1');
+    await prisma.$queryRaw`SELECT 1`;
     checks['postgres'] = 'ok';
   } catch {
     /* остаётся fail */

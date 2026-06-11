@@ -1,10 +1,11 @@
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import type {
   ArticleDto,
   ArticlesPageDto,
   CreateArticleDto,
   ListArticlesQueryDto,
 } from '../dto/article.dto.js';
+import { Prisma } from '../generated/prisma/client.js';
 
 interface ArticleRow {
   id: string;
@@ -15,7 +16,9 @@ interface ArticleRow {
   created_at: Date;
 }
 
-const ARTICLE_COLUMNS = 'id, title, short_desc, description, author_id, created_at';
+interface ArticleRowWithTotal extends ArticleRow {
+  total: bigint;
+}
 
 function toDto(row: ArticleRow): ArticleDto {
   return {
@@ -28,29 +31,46 @@ function toDto(row: ArticleRow): ArticleDto {
   };
 }
 
+function toRow(article: {
+  id: string;
+  title: string;
+  shortDesc: string | null;
+  description: string;
+  authorId: string | null;
+  createdAt: Date;
+}): ArticleRow {
+  return {
+    id: article.id,
+    title: article.title,
+    short_desc: article.shortDesc,
+    description: article.description,
+    author_id: article.authorId,
+    created_at: article.createdAt,
+  };
+}
+
 export const articleRepository = {
   async create(data: CreateArticleDto, authorId: string): Promise<ArticleDto> {
-    const { rows } = await pool.query<ArticleRow>(
-      `INSERT INTO articles (title, short_desc, description, author_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING ${ARTICLE_COLUMNS}`,
-      [data.title, data.short_desc ?? null, data.description, authorId],
-    );
-    return toDto(rows[0]!);
+    const article = await prisma.article.create({
+      data: {
+        title: data.title,
+        shortDesc: data.short_desc ?? null,
+        description: data.description,
+        authorId,
+      },
+    });
+    return toDto(toRow(article));
   },
 
   async findAll(): Promise<ArticleDto[]> {
-    const { rows } = await pool.query<ArticleRow>(
-      `SELECT ${ARTICLE_COLUMNS}
-       FROM articles
-       ORDER BY created_at DESC`,
-    );
-    return rows.map(toDto);
+    const articles = await prisma.article.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return articles.map((article) => toDto(toRow(article)));
   },
 
   /** Пагинация + сортировка + полнотекстовый поиск (tsvector). */
   async findPage(query: ListArticlesQueryDto): Promise<ArticlesPageDto> {
-    // Белый список сортировок — значения проверены zod-схемой
     const sortMap: Record<ListArticlesQueryDto['sort'], string> = {
       'created_at:desc': 'created_at DESC',
       'created_at:asc': 'created_at ASC',
@@ -61,17 +81,16 @@ export const articleRepository = {
     const offset = (query.page - 1) * query.limit;
     const search = query.q ?? null;
 
-    const { rows } = await pool.query<ArticleRow & { total: string }>(
-      `SELECT ${ARTICLE_COLUMNS}, count(*) OVER () AS total
-       FROM articles
-       WHERE $1::text IS NULL OR search_vector @@ websearch_to_tsquery('russian', $1)
-       ORDER BY ${orderBy}
-       LIMIT $2 OFFSET $3`,
-      [search, query.limit, offset],
-    );
+    const rows = await prisma.$queryRaw<ArticleRowWithTotal[]>`
+      SELECT id, title, short_desc, description, author_id, created_at,
+             count(*) OVER () AS total
+      FROM articles
+      WHERE ${search === null ? Prisma.sql`true` : Prisma.sql`search_vector @@ websearch_to_tsquery('russian', ${search})`}
+      ORDER BY ${Prisma.raw(orderBy)}
+      LIMIT ${query.limit} OFFSET ${offset}
+    `;
 
-    const total =
-      rows.length > 0 ? Number.parseInt(rows[0]!.total, 10) : await this.countSearch(search);
+    const total = rows.length > 0 ? Number(rows[0]!.total) : await this.countSearch(search);
     return {
       items: rows.map(toDto),
       total,
@@ -82,33 +101,27 @@ export const articleRepository = {
   },
 
   async countSearch(search: string | null): Promise<number> {
-    const { rows } = await pool.query<{ count: string }>(
-      `SELECT count(*) AS count
-       FROM articles
-       WHERE $1::text IS NULL OR search_vector @@ websearch_to_tsquery('russian', $1)`,
-      [search],
-    );
-    return Number.parseInt(rows[0]!.count, 10);
+    const rows = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT count(*) AS count
+      FROM articles
+      WHERE ${search === null ? Prisma.sql`true` : Prisma.sql`search_vector @@ websearch_to_tsquery('russian', ${search})`}
+    `;
+    return Number(rows[0]?.count ?? 0);
   },
 
   async findById(id: string): Promise<ArticleDto | null> {
-    const { rows } = await pool.query<ArticleRow>(
-      `SELECT ${ARTICLE_COLUMNS}
-       FROM articles
-       WHERE id = $1`,
-      [id],
-    );
-    return rows[0] ? toDto(rows[0]) : null;
+    const article = await prisma.article.findUnique({ where: { id } });
+    return article ? toDto(toRow(article)) : null;
   },
 
   async deleteById(id: string): Promise<number> {
-    const result = await pool.query('DELETE FROM articles WHERE id = $1', [id]);
-    return result.rowCount ?? 0;
+    const result = await prisma.article.deleteMany({ where: { id } });
+    return result.count;
   },
 
   async deleteAll(): Promise<number> {
-    const result = await pool.query('DELETE FROM articles');
-    return result.rowCount ?? 0;
+    const result = await prisma.article.deleteMany();
+    return result.count;
   },
 };
 

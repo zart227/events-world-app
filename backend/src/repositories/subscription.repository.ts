@@ -1,15 +1,6 @@
-import { pool } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
 import type { SubscriptionDto } from '../dto/subscription.dto.js';
-
-interface SubscriptionRow {
-  id: string;
-  user_id: string;
-  city: string;
-  address: string;
-  latitude: string;
-  longitude: string;
-  created_at: Date;
-}
+import { Prisma } from '../generated/prisma/client.js';
 
 export interface CityWithSubscribers {
   city: string;
@@ -19,16 +10,25 @@ export interface CityWithSubscribers {
   userIds: string[];
 }
 
-const COLUMNS = 'id, user_id, city, address, latitude, longitude, created_at';
+function formatCoordinate(value: { toString(): string }): string {
+  return String(Number.parseFloat(value.toString()));
+}
 
-function toDto(row: SubscriptionRow): SubscriptionDto {
+function toDto(row: {
+  id: string;
+  city: string;
+  address: string;
+  latitude: { toString(): string };
+  longitude: { toString(): string };
+  createdAt: Date;
+}): SubscriptionDto {
   return {
     id: row.id,
     city: row.city,
     address: row.address,
-    latitude: String(Number.parseFloat(row.latitude)),
-    longitude: String(Number.parseFloat(row.longitude)),
-    created_at: row.created_at.toISOString(),
+    latitude: formatCoordinate(row.latitude),
+    longitude: formatCoordinate(row.longitude),
+    created_at: row.createdAt.toISOString(),
   };
 }
 
@@ -40,49 +40,60 @@ export const subscriptionRepository = {
     latitude: number;
     longitude: number;
   }): Promise<SubscriptionDto | null> {
-    const { rows } = await pool.query<SubscriptionRow>(
-      `INSERT INTO city_subscriptions (user_id, city, address, latitude, longitude)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (user_id, city) DO NOTHING
-       RETURNING ${COLUMNS}`,
-      [data.userId, data.city, data.address, data.latitude, data.longitude],
-    );
-    return rows[0] ? toDto(rows[0]) : null;
+    try {
+      const row = await prisma.citySubscription.create({
+        data: {
+          userId: data.userId,
+          city: data.city,
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+        },
+      });
+      return toDto(row);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return null;
+      }
+      throw error;
+    }
   },
 
   async findAllByUser(userId: string): Promise<SubscriptionDto[]> {
-    const { rows } = await pool.query<SubscriptionRow>(
-      `SELECT ${COLUMNS} FROM city_subscriptions WHERE user_id = $1 ORDER BY created_at ASC`,
-      [userId],
-    );
+    const rows = await prisma.citySubscription.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
     return rows.map(toDto);
   },
 
   async deleteByIdForUser(id: string, userId: string): Promise<number> {
-    const result = await pool.query(
-      'DELETE FROM city_subscriptions WHERE id = $1 AND user_id = $2',
-      [id, userId],
-    );
-    return result.rowCount ?? 0;
+    const result = await prisma.citySubscription.deleteMany({
+      where: { id, userId },
+    });
+    return result.count;
   },
 
   /** Города с агрегированным списком подписчиков — для фоновой задачи. */
   async findCitiesWithSubscribers(): Promise<CityWithSubscribers[]> {
-    const { rows } = await pool.query<{
-      city: string;
-      address: string;
-      latitude: string;
-      longitude: string;
-      user_ids: string[];
-    }>(
-      `SELECT city,
-              min(address) AS address,
-              min(latitude) AS latitude,
-              min(longitude) AS longitude,
-              array_agg(DISTINCT user_id) AS user_ids
-       FROM city_subscriptions
-       GROUP BY city`,
-    );
+    const rows = await prisma.$queryRaw<
+      {
+        city: string;
+        address: string;
+        latitude: string;
+        longitude: string;
+        user_ids: string[];
+      }[]
+    >`
+      SELECT city,
+             min(address) AS address,
+             min(latitude::text) AS latitude,
+             min(longitude::text) AS longitude,
+             array_agg(DISTINCT user_id::text) AS user_ids
+      FROM city_subscriptions
+      GROUP BY city
+    `;
+
     return rows.map((row) => ({
       city: row.city,
       address: row.address,

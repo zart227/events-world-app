@@ -1,7 +1,6 @@
 import { createApp } from './app.js';
 import { config } from './config/env.js';
-import { runMigrations } from './db/migrate.js';
-import { closePool, pool } from './db/pool.js';
+import { connectPrisma, disconnectPrisma, runMigrations } from './db/prisma.js';
 import { closeRedis, connectRedis } from './db/redis.js';
 import { startPollutionRefreshJob } from './jobs/pollution-refresh.job.js';
 import { logger } from './logger/logger.js';
@@ -10,7 +9,8 @@ import { closeSocket, initSocket } from './ws/socket.js';
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 async function main(): Promise<void> {
-  await runMigrations(pool);
+  runMigrations();
+  await connectPrisma();
   await connectRedis();
 
   const app = createApp();
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
           });
         });
         await closeRedis();
-        await closePool();
+        await disconnectPrisma();
         logger.info('Shutdown complete');
         process.exit(0);
       } catch (err) {

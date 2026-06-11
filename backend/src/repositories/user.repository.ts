@@ -1,5 +1,5 @@
-import type pg from 'pg';
-import { pool, withTransaction } from '../db/pool.js';
+import { prisma } from '../db/prisma.js';
+import type { Prisma } from '../generated/prisma/client.js';
 
 export interface UserEntity {
   id: string;
@@ -9,47 +9,62 @@ export interface UserEntity {
   created_at: Date;
 }
 
-const USER_COLUMNS = 'id, email, password_hash, role, created_at';
+type DbClient = Prisma.TransactionClient | typeof prisma;
+
+function toEntity(user: {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: string;
+  createdAt: Date;
+}): UserEntity {
+  return {
+    id: user.id,
+    email: user.email,
+    password_hash: user.passwordHash,
+    role: user.role as UserEntity['role'],
+    created_at: user.createdAt,
+  };
+}
 
 export const userRepository = {
   /**
    * Создаёт пользователя вместе с первичными настройками — в одной транзакции.
    */
-  async createWithSettings(data: {
-    email: string;
-    passwordHash: string;
-    role?: 'user' | 'admin';
-  }): Promise<UserEntity> {
-    return withTransaction(async (client) => {
-      const { rows } = await client.query<UserEntity>(
-        `INSERT INTO users (email, password_hash, role)
-         VALUES ($1, $2, $3)
-         RETURNING ${USER_COLUMNS}`,
-        [data.email, data.passwordHash, data.role ?? 'user'],
-      );
-      const user = rows[0]!;
-      await client.query('INSERT INTO user_settings (user_id) VALUES ($1)', [user.id]);
-      return user;
-    });
+  async createWithSettings(
+    data: {
+      email: string;
+      passwordHash: string;
+      role?: 'user' | 'admin';
+    },
+    client: DbClient = prisma,
+  ): Promise<UserEntity> {
+    const run = async (tx: Prisma.TransactionClient) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          passwordHash: data.passwordHash,
+          role: data.role ?? 'user',
+          settings: { create: {} },
+        },
+      });
+      return toEntity(user);
+    };
+
+    if ('$transaction' in client) {
+      return client.$transaction(run);
+    }
+    return run(client);
   },
 
-  async findByEmail(
-    email: string,
-    client: pg.Pool | pg.PoolClient = pool,
-  ): Promise<UserEntity | null> {
-    const { rows } = await client.query<UserEntity>(
-      `SELECT ${USER_COLUMNS} FROM users WHERE email = $1`,
-      [email],
-    );
-    return rows[0] ?? null;
+  async findByEmail(email: string, client: DbClient = prisma): Promise<UserEntity | null> {
+    const user = await client.user.findUnique({ where: { email } });
+    return user ? toEntity(user) : null;
   },
 
   async findById(id: string): Promise<UserEntity | null> {
-    const { rows } = await pool.query<UserEntity>(
-      `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
-      [id],
-    );
-    return rows[0] ?? null;
+    const user = await prisma.user.findUnique({ where: { id } });
+    return user ? toEntity(user) : null;
   },
 };
 
