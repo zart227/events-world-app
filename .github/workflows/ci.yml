@@ -26,6 +26,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck -w @events-world/backend
 
+      - name: Generate Prisma Client
+        run: npm run db:generate -w @events-world/backend
+
       - name: Tests (testcontainers)
         run: npm test -w @events-world/backend
 

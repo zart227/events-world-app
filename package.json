@@ -14,7 +14,7 @@
     "start": "npm run start -w @events-world/backend",
     "start-client": "npm run start -w @events-world/frontend",
     "build": "npm run build -w @events-world/backend && npm run build -w @events-world/frontend",
-    "migrate": "npm run migrate -w @events-world/backend",
+    "migrate": "npm run db:migrate:deploy -w @events-world/backend",
     "test": "npm run test -w @events-world/backend",
     "typecheck": "npm run typecheck -w @events-world/backend",
     "lint": "npm run lint -w @events-world/backend",
