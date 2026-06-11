@@ -1,19 +1,21 @@
-describe('Login then logout', () => {
-	it('login first then clears localStorage user object and redirect to login', () => {
-	  cy.login(Cypress.env('test_email'), Cypress.env('test_password'));
-	  cy.visit('/pollution');
-  
-	  context(' ждём 3 секунды, потом logout', () => {
-		cy.wait(3000);
-		cy.get('button[data-role="logout"]').click();
-		cy.url().should('include', '/login');
-		cy.getAllLocalStorage().then((result) => {
-		  if (result.hasOwnProperty(Cypress.config('baseUrl'))) {
-			expect(result[Cypress.config('baseUrl')]).not.to.have.property('user');
-		  }
-		});
-		cy.get('header').find('button[data-role="logout"]').should('not.exist');
-	  });
-	});
+describe('Выход из системы', () => {
+  beforeEach(() => {
+    cy.setupApiMocks();
+    cy.login();
   });
-  
+
+  it('очищает localStorage и перенаправляет на /login', () => {
+    cy.visit('/location');
+    cy.get('[data-role="logout"]').click();
+    cy.wait('@authLogout');
+    cy.url().should('include', '/login');
+
+    cy.window().then((win) => {
+      expect(win.localStorage.getItem('user')).to.be.null;
+      expect(win.localStorage.getItem('accessToken')).to.be.null;
+    });
+
+    cy.get('[data-role="logout"]').should('not.exist');
+    cy.get('.ant-menu').contains('Вход').should('be.visible');
+  });
+});

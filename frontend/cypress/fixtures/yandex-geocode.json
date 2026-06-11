@@ -1,0 +1,27 @@
+{
+  "response": {
+    "GeoObjectCollection": {
+      "metaDataProperty": {
+        "GeocoderResponseMetaData": {
+          "found": "1",
+          "request": "Казань",
+          "results": "1"
+        }
+      },
+      "featureMember": [
+        {
+          "GeoObject": {
+            "metaDataProperty": {
+              "GeocoderMetaData": {
+                "text": "Казань, Республика Татарстан"
+              }
+            },
+            "Point": {
+              "pos": "49.108795 55.796289"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,52 +1,99 @@
 /// <reference types="cypress" />
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
-//
-// declare global {
-//   namespace Cypress {
-//     interface Chainable {
-//       login(email: string, password: string): Chainable<void>
-//       drag(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       dismiss(subject: string, options?: Partial<TypeOptions>): Chainable<Element>
-//       visit(originalFn: CommandOriginalFn, url: string, options: Partial<VisitOptions>): Chainable<Element>
-//     }
-//   }
-// }
 
-Cypress.Commands.add('login', (email, password) => {
-	cy.session([email, password], () => {
-	  cy.visit('/login');
-	  cy.get('input#email').type(email);
-	  cy.get('input#password').type(`${password}{enter}`);
-	  cy.url().should('include', '/pollution');
-	  cy.getAllLocalStorage().then((result) => {
-		expect(result).to.have.property(Cypress.config('baseUrl'));
-		expect(result[Cypress.config('baseUrl')]).to.have.property('user');
-	  });
-	  cy.get('header').should('contain', email);
-	});
+import { setupCommonApiMocks } from './apiMocks';
+
+type AuthUser = {
+  id: string;
+  email: string;
+  role: string;
+};
+
+const fillAuthForm = (email: string, password: string) => {
+  cy.get('.ant-tabs-tabpane-active').within(() => {
+    cy.get('input[placeholder="Email"]').clear().type(email);
+    cy.get('input[placeholder="Пароль"]').clear().type(password);
   });
-  
+};
+
+const assertLocationPage = () => {
+  cy.url().should('include', '/location');
+  cy.get('input[placeholder="Введите местоположение"]').should('be.visible');
+};
+
+Cypress.Commands.add('setupApiMocks', () => {
+  setupCommonApiMocks();
+});
+
+Cypress.Commands.add('authenticate', (email?: string) => {
+  const userEmail = email ?? Cypress.env('test_email');
+
+  cy.fixture('auth').then((auth) => {
+    const user: AuthUser = { ...auth.user, email: userEmail };
+    cy.window().then((win) => {
+      win.localStorage.setItem('user', JSON.stringify(user));
+      win.localStorage.setItem('accessToken', auth.accessToken);
+    });
+  });
+});
+
+Cypress.Commands.add('loginViaUi', (email?: string, password?: string) => {
+  const testEmail = email ?? Cypress.env('test_email');
+  const testPassword = password ?? Cypress.env('test_password');
+
+  if (!Cypress.env('useRealApi')) {
+    cy.setupApiMocks();
+  }
+
+  cy.visit('/login');
+  fillAuthForm(testEmail, testPassword);
+  cy.contains('button', 'Войти').should('not.be.disabled').click();
+
+  if (!Cypress.env('useRealApi')) {
+    cy.wait('@authLogin');
+  }
+
+  assertLocationPage();
+  cy.window().its('localStorage.user').should('exist');
+});
+
+Cypress.Commands.add('login', (email?: string, password?: string) => {
+  const testEmail = email ?? Cypress.env('test_email');
+  const testPassword = password ?? Cypress.env('test_password');
+
+  cy.session(
+    [testEmail, testPassword, Cypress.env('useRealApi')],
+    () => {
+      cy.loginViaUi(testEmail, testPassword);
+    },
+    {
+      validate() {
+        cy.window().then((win) => {
+          expect(win.localStorage.getItem('user')).to.exist;
+        });
+      },
+    },
+  );
+});
+
+Cypress.Commands.add('assertLocationPage', assertLocationPage);
+
+Cypress.Commands.add('logoutViaUi', () => {
+  cy.get('[data-role="logout"]').click();
+  cy.url().should('include', '/login');
+  cy.window().its('localStorage.user').should('not.exist');
+});
+
+declare global {
+  namespace Cypress {
+    interface Chainable {
+      setupApiMocks(): Chainable<void>;
+      authenticate(email?: string): Chainable<void>;
+      assertLocationPage(): Chainable<void>;
+      loginViaUi(email?: string, password?: string): Chainable<void>;
+      login(email?: string, password?: string): Chainable<void>;
+      logoutViaUi(): Chainable<void>;
+    }
+  }
+}
+
+export {};
