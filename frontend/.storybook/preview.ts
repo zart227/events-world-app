@@ -1,4 +1,6 @@
-import type { Preview } from "@storybook/react";
+import type { Preview } from '@storybook/react';
+import '../src/index.css';
+import '../src/components/App/App.css';
 
 const preview: Preview = {
   parameters: {
@@ -8,6 +10,7 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
+    layout: 'padded',
   },
 };
 
